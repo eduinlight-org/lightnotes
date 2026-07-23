@@ -1,0 +1,15 @@
+[package]
+name = "ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dioxus = { workspace = true }
+api = { workspace = true }
+dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false, features = ["router"] }
+palette = { version = "0.7.6", default-features = false }
+dioxus-icons = { version = "0.1.0", default-features = false }
+time = { version = "0.3.44", default-features = false }
+
+[features]
+server = ["api/server"]
