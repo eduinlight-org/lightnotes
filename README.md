@@ -17,9 +17,9 @@ your_project/
 │     └─ ... # All shared server logic
 └─ packages/
    ├─ app/
-   │  └─ ... # Shared routes and pages used by every platform
+   │  └─ ... # Shared routes, pages, and app-specific components used by every platform
    └─ ui/
-      └─ ... # Presentational components shared between multiple platforms
+      └─ ... # Generic, app-agnostic presentational components shared between multiple platforms
 ```
 
 ## Platform crates
@@ -38,12 +38,19 @@ Since the platform crates start out almost identical, the actual routes, pages a
 
 ## Shared app crate
 
-The workspace contains an `app` crate with the `Route` enum, the page components (`Home`, `Blog`) and the shared navbar layout used by every platform's router. The `app` crate starts out something like this:
+The workspace contains an `app` crate with the `Route` enum, the page components (`Home`, `Blog`) and the shared navbar layout used by every platform's router. This is also where **app-specific components** live: anything that is tied to this particular app (references `Route`, hardcodes brand/copy, composes other components into a page section) belongs in `app`, not `ui`, even if it's presentational. The `app` crate starts out something like this:
 
 ```
 app/
 ├─ src/
 │  ├─ lib.rs # Defines the Route enum and the shared layout, re-exports the views
+│  ├─ components/
+│  │  ├─ mod.rs # Defines the module for app-specific components and re-exports them
+│  │  ├─ app_bar.rs # The sticky header used by the shared layout
+│  │  ├─ hero.rs # The Home page hero section
+│  │  ├─ sections.rs # The Home page feature sections
+│  │  ├─ footer.rs # The shared footer used by the layout
+│  │  ├─ login_button.rs # The login button used in the app bar
 │  ├─ views/
 │  │  ├─ mod.rs # Defines the module for the views and re-exports the components for each route
 │  │  ├─ blog.rs # The component that will render at the /blog/:id route
@@ -52,16 +59,17 @@ app/
 
 ## Shared UI crate
 
-The workspace contains a `ui` crate with presentational components that are shared between multiple platforms (and used by `app`). You should put any UI elements you want to use in multiple platforms in this crate. You can also put some shared client side logic in this crate, but be careful to not pull in platform specific dependencies. The `ui` crate starts out something like this:
+The workspace contains a `ui` crate with presentational components that have **no link to a specific application**: no references to `app::Route`, no hardcoded brand/copy, nothing that only makes sense for this one app. Only put a component here if it would make sense to copy-paste into a completely different Dioxus app unchanged. The `ui` crate starts out something like this:
 
 ```
 ui/
 ├─ src/
 │  ├─ lib.rs # The entrypoint for the ui crate
-│  ├─ hero.rs # The Hero component that will be used in every platform
+│  ├─ components/ # A generic, app-agnostic component primitives library (buttons, cards, navbar, dialogs, ...)
 │  ├─ echo.rs # The shared echo component that communicates with the server
-│  ├─ navbar.rs # The Navbar component that will be used in the layout of every platform's router
 ```
+
+If a component under `ui/src/components` needs app-specific content or behavior (copy, routes, branding), don't edit it in place — compose it from `app/src/components` instead, the same way `app_bar.rs` wraps `ui::components::navbar`.
 
 ## Shared backend logic
 

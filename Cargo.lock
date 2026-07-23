@@ -68,6 +68,7 @@ name = "app"
 version = "0.1.0"
 dependencies = [
  "dioxus",
+ "dioxus-icons",
  "ui",
 ]
 
@@ -3153,6 +3154,15 @@ dependencies = [
  "html5ever",
  "indexmap",
  "selectors",
+]
+
+[[package]]
+name = "landing"
+version = "0.1.0"
+dependencies = [
+ "dioxus",
+ "dioxus-icons",
+ "ui",
 ]
 
 [[package]]

@@ -1,12 +1,14 @@
 [package]
-name = "app"
+name = "landing"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-dioxus = { workspace = true, features = ["router"] }
+dioxus = { workspace = true, features = ["router", "fullstack"] }
 ui = { workspace = true }
 dioxus-icons = { version = "0.1.0", default-features = false }
 
 [features]
-server = ["ui/server"]
+default = []
+web = ["dioxus/web"]
+server = ["dioxus/server", "ui/server"]

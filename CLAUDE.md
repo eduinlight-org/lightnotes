@@ -263,3 +263,24 @@ The initial UI rendered by the component on the client must be identical to the 
 
 * Use the `use_server_future` hook instead of `use_resource`. It runs the future on the server, serializes the result, and sends it to the client, ensuring the client has the data immediately for its first render.
 * Any code that relies on browser-specific APIs (like accessing `localStorage`) must be run *after* hydration. Place this code inside a `use_effect` hook.
+
+# Project Conventions
+
+## Component Directory Structure
+
+This applies to app-owned components (`packages/app/src/components`, `apps/*/src/components`) — not `packages/ui`, whose components are generated wrappers around `dioxus-primitives`.
+
+Every component gets its own directory under `components/`, named after the component in snake_case:
+
+```
+components/
+	hero/
+		mod.rs        // mod hero; pub use hero::Hero; (+ mod use_hero; pub use use_hero::use_hero; if a hook exists)
+		hero.rs       // the component itself — rendering only
+		use_hero.rs   // optional: signals/state/business logic the component needs, exposed as a use_hero hook
+```
+
+* The component file is named after the component (e.g. `login_button/login_button.rs`), not a generic `component.rs`.
+* `mod.rs` only declares submodules and re-exports — no logic there.
+* If a component has no state or logic to extract, omit `use_<name>.rs` — don't create an empty hook file.
+* The parent `components/mod.rs` declares each component the same way it would a flat file: `mod hero; pub use hero::Hero;` — Rust resolves this to `hero/mod.rs` automatically.

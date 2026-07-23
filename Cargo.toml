@@ -7,6 +7,7 @@ members = [
     "apps/desktop",
     "apps/mobile",
     "apps/api",
+    "apps/landing",
 ]
 
 [workspace.dependencies]

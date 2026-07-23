@@ -1,10 +1,14 @@
-//! This crate contains all shared UI for the workspace.
+//! This crate contains presentational components with no ties to a specific application.
+//! App-specific compositions (things that reference this app's routes, brand or copy) live in
+//! `packages/app/src/components` instead.
 
-mod hero;
-pub use hero::Hero;
+use dioxus::prelude::*;
 
-mod navbar;
-pub use navbar::Navbar;
+pub mod components;
 
 mod echo;
 pub use echo::Echo;
+
+/// Theme variables consumed by every component in [`components`]. Link this once in each
+/// platform's document head.
+pub const THEME_CSS: Asset = asset!("/assets/dx-components-theme.css");
