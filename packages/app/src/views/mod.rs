@@ -1,2 +1,5 @@
-mod home;
-pub use home::Home;
+mod notes;
+pub use notes::Notes;
+
+mod note_editor;
+pub use note_editor::NoteEditor;

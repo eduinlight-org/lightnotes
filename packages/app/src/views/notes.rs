@@ -2,7 +2,7 @@ use crate::components::EmptyState;
 use dioxus::prelude::*;
 
 #[component]
-pub fn Home() -> Element {
+pub fn Notes() -> Element {
   rsx! {
       EmptyState {}
   }

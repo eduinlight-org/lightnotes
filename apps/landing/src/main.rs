@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use dioxus_icons::lucide::NotebookPen;
 use ui::components::button::{Button, ButtonVariant};
 use ui::components::navbar::NavbarItem;
 
@@ -46,7 +47,7 @@ fn LandingNavbar() -> Element {
                   Link {
                       to: Route::Home {},
                       class: "flex items-center gap-2 whitespace-nowrap text-white no-underline",
-                      span { "📝" }
+                      NotebookPen { size: "18px" }
                       span { class: "hidden sm:inline", "Notes" }
                   }
               },

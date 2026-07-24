@@ -7,6 +7,7 @@ edition = "2021"
 dioxus = { workspace = true, features = ["router"] }
 ui = { workspace = true }
 dioxus-icons = { version = "0.1.0", default-features = false }
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 
 [features]
 server = ["ui/server"]

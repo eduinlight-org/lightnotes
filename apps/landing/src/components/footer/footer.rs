@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use dioxus_icons::lucide::NotebookPen;
 
 const FOOTER_LINK_CLASS: &str = "text-[#a1a1a1] no-underline hover:text-white";
 
@@ -11,7 +12,7 @@ pub fn Footer() -> Element {
               class: "mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 sm:flex-row",
               div {
                   class: "flex items-center gap-2 text-white",
-                  span { "📝" }
+                  NotebookPen { size: "18px" }
                   span { class: "font-semibold", "Notes" }
               }
               div {
