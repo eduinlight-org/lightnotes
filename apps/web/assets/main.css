@@ -1,11 +1,33 @@
 :root {
     --dark: initial;
     --light: ;
+    --accent: #9184d9;
+
+    --primary-color: var(--dark, #0e0f18) var(--light, #ffffff);
+    --primary-color-1: var(--dark, #161826) var(--light, #eceefb);
+    --primary-color-2: var(--dark, #232532) var(--light, #fbfbfe);
+    --primary-color-3: var(--dark, #3f424d) var(--light, #f3f4fa);
+    --primary-color-4: var(--dark, #595d6c) var(--light, #e8eaf6);
+    --primary-color-5: var(--dark, #75798c) var(--light, #dde0f1);
+    --primary-color-6: var(--dark, color-mix(in srgb, #e9e9ed 16%, transparent)) var(--light, color-mix(in srgb, #26283a 14%, transparent));
+    --primary-color-7: var(--dark, #9397ab) var(--light, #b0b4cf);
+
+    --secondary-color: var(--dark, #e9e9ed) var(--light, #26283a);
+    --secondary-color-1: var(--dark, #f3f5fe) var(--light, #1a1c2b);
+    --secondary-color-2: var(--dark, #e4e7f5) var(--light, #3a3d52);
+    --secondary-color-3: var(--dark, #cfd3e5) var(--light, #565973);
+    --secondary-color-4: var(--dark, #e9e9ed) var(--light, #26283a);
+    --secondary-color-5: color-mix(in srgb, var(--secondary-color) 55%, transparent);
+    --secondary-color-6: color-mix(in srgb, var(--secondary-color) 40%, transparent);
 }
 
 body {
-    background-color: #0f1116;
-    color: #ffffff;
+    background-color: var(--primary-color-1);
+    color: var(--secondary-color);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
+}
+
+button, [role="button"], summary, a {
+    cursor: pointer;
 }

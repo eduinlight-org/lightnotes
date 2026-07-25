@@ -1,4 +1,6 @@
 use dioxus::prelude::*;
+use dioxus_primitives::dioxus_attributes::attributes;
+use dioxus_primitives::merge_attributes;
 
 #[css_module("/src/components/textarea/style.css")]
 struct Styles;
@@ -51,11 +53,15 @@ pub fn Textarea(
     attributes: Vec<Attribute>,
     children: Element,
 ) -> Element {
+    let base = attributes!(textarea {
+        class: Styles::dx_textarea,
+        "data-slot": "textarea",
+        "data-style": variant.class(),
+    });
+    let merged = merge_attributes(vec![base, attributes]);
+
     rsx! {
         textarea {
-            class: Styles::dx_textarea,
-            "data-slot": "textarea",
-            "data-style": variant.class(),
             oninput: move |e| _ = oninput.map(|callback| callback(e)),
             onchange: move |e| _ = onchange.map(|callback| callback(e)),
             oninvalid: move |e| _ = oninvalid.map(|callback| callback(e)),
@@ -75,7 +81,7 @@ pub fn Textarea(
             oncut: move |e| _ = oncut.map(|callback| callback(e)),
             onpaste: move |e| _ = onpaste.map(|callback| callback(e)),
             onmounted: move |e| _ = onmounted.map(|callback| callback(e)),
-            ..attributes,
+            ..merged,
             {children}
         }
     }

@@ -1,25 +1,34 @@
-use crate::components::{AppSidebar, NoteList};
+use crate::components::{AppSidebar, FolderManagerDialog, MobileShell, NoteList, TagManagerDialog};
+use crate::state::UiState;
 use crate::Route;
 use dioxus::prelude::*;
-use ui::components::sidebar::{SidebarInset, SidebarProvider};
+use ui::components::sidebar::{use_is_mobile, SidebarInset, SidebarProvider};
 
 #[component]
 pub fn NotesShell() -> Element {
+  use_context_provider(UiState::seed);
+  let is_mobile = use_is_mobile();
   let route = use_route::<Route>();
-  let note_open = matches!(route, Route::NoteEditor { .. });
+  let full_page = matches!(route, Route::NoteEditor { .. } | Route::TagsScreen { .. } | Route::FoldersScreen { .. });
 
   rsx! {
-      SidebarProvider { class: "h-full",
+      TagManagerDialog {}
+      FolderManagerDialog {}
+      SidebarProvider { class: "h-full! min-h-0!",
           AppSidebar {}
           SidebarInset {
-              div { class: "flex h-full w-full overflow-hidden",
-                  div {
-                      class: if note_open { "hidden h-full md:flex" } else { "flex h-full" },
-                      NoteList {}
-                  }
-                  div {
-                      class: if note_open { "flex h-full flex-1" } else { "hidden h-full flex-1 md:flex" },
-                      Outlet::<Route> {}
+              if is_mobile() {
+                  MobileShell {}
+              } else {
+                  div { class: "flex h-full w-full overflow-hidden",
+                      div {
+                          class: if full_page { "hidden h-full md:flex" } else { "flex h-full" },
+                          NoteList {}
+                      }
+                      div {
+                          class: if full_page { "flex h-full flex-1" } else { "hidden h-full flex-1 md:flex" },
+                          Outlet::<Route> {}
+                      }
                   }
               }
           }

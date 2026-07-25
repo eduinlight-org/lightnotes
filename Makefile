@@ -4,7 +4,7 @@ landing-dev:
 	dx serve --package landing --platform web --port $(LANDING_PORT)
 
 landing-build:
-	dx build --package landing --platform web --fullstack true
+	dx build --package landing --platform web --fullstack true --release
 
 app-web-dev:
 	dx serve --package web --platform web --port $(APP_WEB_PORT)
@@ -17,3 +17,15 @@ app-ios-dev:
 
 app-desktop-dev:
 	dx serve --package desktop --platform desktop
+
+app-web-build:
+	dx build --package web --platform web --fullstack true --release
+
+app-android-build:
+	dx build --package mobile --platform android --release
+
+app-ios-build:
+	dx build --package mobile --platform ios --release
+
+app-desktop-build:
+	dx build --package desktop --platform desktop --release

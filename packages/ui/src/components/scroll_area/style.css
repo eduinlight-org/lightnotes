@@ -1,1 +1,3 @@
-/* Scroll area doesn't require any additional styles */
+@layer components {
+  /* Scroll area doesn't require any additional styles */
+}

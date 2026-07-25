@@ -1,8 +1,10 @@
-/* Label Styles */
-.dx-label {
-  display: flex;
-  align-items: center;
-  color: var(--secondary-color-4);
-  font-size: 0.8rem;
-  line-height: 1;
+@layer components {
+  /* Label Styles */
+  .dx-label {
+    display: flex;
+    align-items: center;
+    color: var(--secondary-color-4);
+    font-size: 0.8rem;
+    line-height: 1;
+  }
 }

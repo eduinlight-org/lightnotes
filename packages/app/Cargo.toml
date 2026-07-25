@@ -8,6 +8,8 @@ dioxus = { workspace = true, features = ["router"] }
 ui = { workspace = true }
 dioxus-icons = { version = "0.1.0", default-features = false }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [features]
 server = ["ui/server"]

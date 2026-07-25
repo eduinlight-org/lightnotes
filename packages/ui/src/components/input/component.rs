@@ -1,4 +1,6 @@
 use dioxus::prelude::*;
+use dioxus_primitives::dioxus_attributes::attributes;
+use dioxus_primitives::merge_attributes;
 #[css_module("/src/components/input/style.css")]
 struct Styles;
 
@@ -28,9 +30,13 @@ pub fn Input(
     attributes: Vec<Attribute>,
     children: Element,
 ) -> Element {
+    let base = attributes!(input {
+        class: Styles::dx_input,
+    });
+    let merged = merge_attributes(vec![base, attributes]);
+
     rsx! {
         input {
-            class: Styles::dx_input,
             oninput: move |e| _ = oninput.map(|callback| callback(e)),
             onchange: move |e| _ = onchange.map(|callback| callback(e)),
             oninvalid: move |e| _ = oninvalid.map(|callback| callback(e)),
@@ -50,7 +56,7 @@ pub fn Input(
             oncopy: move |e| _ = oncopy.map(|callback| callback(e)),
             oncut: move |e| _ = oncut.map(|callback| callback(e)),
             onpaste: move |e| _ = onpaste.map(|callback| callback(e)),
-            ..attributes,
+            ..merged,
             {children}
         }
     }

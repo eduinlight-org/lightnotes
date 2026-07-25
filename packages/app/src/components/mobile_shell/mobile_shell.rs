@@ -1,0 +1,68 @@
+use crate::components::{NoteListItem, SearchInput, SearchInputSize};
+use crate::state::use_notes;
+use crate::Route;
+use dioxus::prelude::*;
+use dioxus_icons::lucide::{CirclePlus, Inbox, Search};
+use ui::components::sidebar::SidebarTrigger;
+
+#[component]
+pub fn MobileShell() -> Element {
+  let mut store = use_notes();
+  let route = use_route::<Route>();
+  let full_page = matches!(route, Route::NoteEditor { .. } | Route::TagsScreen { .. } | Route::FoldersScreen { .. });
+
+  if full_page {
+    return rsx! {
+        div { class: "flex h-full flex-col", Outlet::<Route> {} }
+    };
+  }
+
+  let search = store.search();
+  let has_search = !search.trim().is_empty();
+  let notes = store.visible_notes();
+  let title = store.filter_title();
+
+  rsx! {
+      div { class: "relative flex h-full min-h-0 flex-col overflow-hidden",
+          div { class: "flex flex-none items-center gap-3 p-3",
+              SidebarTrigger {}
+              div { class: "min-w-0 flex-1 truncate text-lg font-medium text-[var(--secondary-color)]", "{title}" }
+              button {
+                  "aria-label": "New note",
+                  onclick: move |_| {
+                      let note_id = store.create_note();
+                      navigator().push(Route::NoteEditor { note_id });
+                  },
+                  CirclePlus { size: "22px", stroke: "var(--accent)" }
+              }
+          }
+          div { class: "flex-none px-3 pb-3",
+              SearchInput {
+                  value: search.clone(),
+                  on_search: move |value| store.set_search(value),
+                  size: SearchInputSize::Large,
+              }
+          }
+          div { class: "min-h-0 flex-1 overflow-y-auto px-3 pb-4",
+              if notes.is_empty() {
+                  div { class: "flex flex-col items-center gap-2 py-16 text-center text-[var(--secondary-color-5)]",
+                      if has_search {
+                          Search { size: "40px", class: "opacity-40" }
+                      } else {
+                          Inbox { size: "40px", class: "opacity-40" }
+                      }
+                      div { class: "text-base font-medium text-[var(--secondary-color)]",
+                          if has_search { "No matches" } else { "No notes yet" }
+                      }
+                      p { class: "text-sm",
+                          if has_search { "Try a different search term." } else { "Create your first note in this view." }
+                      }
+                  }
+              }
+              for note in notes {
+                  NoteListItem { key: "{note.id}", note, is_active: false }
+              }
+          }
+      }
+  }
+}
