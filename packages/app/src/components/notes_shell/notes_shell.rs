@@ -1,15 +1,14 @@
+use super::use_notes_shell::use_notes_shell;
 use crate::components::{AppSidebar, FolderManagerDialog, MobileShell, NoteList, TagManagerDialog};
-use crate::state::UiState;
 use crate::Route;
 use dioxus::prelude::*;
-use ui::components::sidebar::{use_is_mobile, SidebarInset, SidebarProvider};
+use ui::components::sidebar::{SidebarInset, SidebarProvider};
 
 #[component]
 pub fn NotesShell() -> Element {
-  use_context_provider(UiState::seed);
-  let is_mobile = use_is_mobile();
-  let route = use_route::<Route>();
-  let full_page = matches!(route, Route::NoteEditor { .. } | Route::TagsScreen { .. } | Route::FoldersScreen { .. });
+  let notes_shell = use_notes_shell();
+  let is_mobile = notes_shell.is_mobile;
+  let full_page = notes_shell.full_page;
 
   rsx! {
       TagManagerDialog {}

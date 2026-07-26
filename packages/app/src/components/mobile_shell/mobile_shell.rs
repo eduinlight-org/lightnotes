@@ -1,5 +1,5 @@
+use super::use_mobile_shell::use_mobile_shell;
 use crate::components::{NoteListItem, SearchInput, SearchInputSize};
-use crate::state::use_notes;
 use crate::Route;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{CirclePlus, Inbox, Search};
@@ -7,16 +7,15 @@ use ui::components::sidebar::SidebarTrigger;
 
 #[component]
 pub fn MobileShell() -> Element {
-  let mut store = use_notes();
-  let route = use_route::<Route>();
-  let full_page = matches!(route, Route::NoteEditor { .. } | Route::TagsScreen { .. } | Route::FoldersScreen { .. });
+  let mut mobile_shell = use_mobile_shell();
 
-  if full_page {
+  if mobile_shell.full_page {
     return rsx! {
         div { class: "flex h-full flex-col", Outlet::<Route> {} }
     };
   }
 
+  let mut store = mobile_shell.store;
   let search = store.search();
   let has_search = !search.trim().is_empty();
   let notes = store.visible_notes();
@@ -29,10 +28,7 @@ pub fn MobileShell() -> Element {
               div { class: "min-w-0 flex-1 truncate text-lg font-medium text-[var(--secondary-color)]", "{title}" }
               button {
                   "aria-label": "New note",
-                  onclick: move |_| {
-                      let note_id = store.create_note();
-                      navigator().push(Route::NoteEditor { note_id });
-                  },
+                  onclick: move |_| mobile_shell.create_note(),
                   CirclePlus { size: "22px", stroke: "var(--accent)" }
               }
           }

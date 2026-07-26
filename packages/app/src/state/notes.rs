@@ -24,6 +24,20 @@ pub enum FolderIcon {
   BookOpen,
   Notebook,
   Archive,
+  House,
+  Star,
+  Heart,
+  Settings,
+  Calendar,
+  Camera,
+  Music,
+  Code,
+  Palette,
+  Gift,
+  Globe,
+  Lock,
+  Rocket,
+  Bookmark,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -1,6 +1,5 @@
+use super::use_note_list::use_note_list;
 use crate::components::{NoteListItem, SearchInput};
-use crate::state::use_notes;
-use crate::Route;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{Inbox, Plus, Search};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
@@ -8,12 +7,8 @@ use ui::components::sidebar::SidebarTrigger;
 
 #[component]
 pub fn NoteList() -> Element {
-  let mut store = use_notes();
-  let route = use_route::<Route>();
-  let active_note_id = match route {
-    Route::NoteEditor { note_id } => Some(note_id),
-    _ => None,
-  };
+  let (mut note_list, active_note_id) = use_note_list();
+  let mut store = note_list.store;
 
   let search = store.search();
   let has_search = !search.trim().is_empty();
@@ -42,10 +37,7 @@ pub fn NoteList() -> Element {
                       size: ButtonSize::IconSm,
                       class: "border border-[var(--primary-color-6)] bg-transparent hover:bg-[color-mix(in_srgb,var(--secondary-color)_5%,transparent)]",
                       "aria-label": "New note",
-                      onclick: move |_| {
-                          let note_id = store.create_note();
-                          navigator().push(Route::NoteEditor { note_id });
-                      },
+                      onclick: move |_| note_list.create_note(),
                       Plus { size: "16px" }
                   }
               }

@@ -1,22 +1,7 @@
+use super::use_section_shell::{use_section_shell, Section};
 use crate::Route;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{Calendar, Notebook, Settings as SettingsIcon};
-use ui::components::sidebar::use_is_mobile;
-
-#[derive(Clone, Copy, PartialEq)]
-enum Section {
-  Notes,
-  Diary,
-  Settings,
-}
-
-fn section_of(route: &Route) -> Section {
-  match route {
-    Route::Diary {} => Section::Diary,
-    Route::Settings {} => Section::Settings,
-    _ => Section::Notes,
-  }
-}
 
 fn rail_button_class(active: bool) -> &'static str {
   if active {
@@ -36,10 +21,10 @@ fn tab_button_class(active: bool) -> &'static str {
 
 #[component]
 pub fn SectionShell() -> Element {
-  let is_mobile = use_is_mobile();
-  let route = use_route::<Route>();
-  let section = section_of(&route);
-  let hide_chrome = matches!(route, Route::NoteEditor { .. });
+  let section_shell = use_section_shell();
+  let is_mobile = section_shell.is_mobile;
+  let section = section_shell.section;
+  let hide_chrome = section_shell.hide_chrome;
 
   if is_mobile() {
     return rsx! {
@@ -49,25 +34,19 @@ pub fn SectionShell() -> Element {
                 div { class: "flex flex-none border-t border-[var(--primary-color-6)] py-1",
                     button {
                         class: tab_button_class(section == Section::Notes),
-                        onclick: move |_| {
-                            navigator().push(Route::Notes {});
-                        },
+                        onclick: move |_| section_shell.go_to_notes(),
                         Notebook { size: "22px" }
                         "Notes"
                     }
                     button {
                         class: tab_button_class(section == Section::Diary),
-                        onclick: move |_| {
-                            navigator().push(Route::Diary {});
-                        },
+                        onclick: move |_| section_shell.go_to_diary(),
                         Calendar { size: "22px" }
                         "Diary"
                     }
                     button {
                         class: tab_button_class(section == Section::Settings),
-                        onclick: move |_| {
-                            navigator().push(Route::Settings {});
-                        },
+                        onclick: move |_| section_shell.go_to_settings(),
                         SettingsIcon { size: "22px" }
                         "Settings"
                     }
@@ -82,25 +61,19 @@ pub fn SectionShell() -> Element {
           nav { class: "flex w-[66px] flex-none flex-col items-center gap-1 border-r border-[var(--primary-color-6)] bg-[var(--primary-color-2)] p-1.5",
               button {
                   class: rail_button_class(section == Section::Notes),
-                  onclick: move |_| {
-                      navigator().push(Route::Notes {});
-                  },
+                  onclick: move |_| section_shell.go_to_notes(),
                   Notebook { size: "21px" }
                   "Notes"
               }
               button {
                   class: rail_button_class(section == Section::Diary),
-                  onclick: move |_| {
-                      navigator().push(Route::Diary {});
-                  },
+                  onclick: move |_| section_shell.go_to_diary(),
                   Calendar { size: "21px" }
                   "Diary"
               }
               button {
                   class: "{rail_button_class(section == Section::Settings)} mt-auto",
-                  onclick: move |_| {
-                      navigator().push(Route::Settings {});
-                  },
+                  onclick: move |_| section_shell.go_to_settings(),
                   SettingsIcon { size: "21px" }
                   "Settings"
               }

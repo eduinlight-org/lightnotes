@@ -1,4 +1,6 @@
-use crate::state::{use_notes, SyncStatus, Theme, ACCENT_SWATCHES};
+use super::use_settings_panel::use_settings_panel;
+use super::SettingsSession;
+use crate::state::{SyncStatus, Theme, ACCENT_SWATCHES};
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{Check, CloudCheck, CloudOff, HardDrive, Moon, Notebook, Sun};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
@@ -13,7 +15,8 @@ fn theme_card_class(active: bool) -> &'static str {
 
 #[component]
 pub fn SettingsPanel() -> Element {
-  let mut store = use_notes();
+  let mut settings = use_settings_panel();
+  let store = settings.store;
   let theme = store.theme();
   let accent = store.accent();
   let sync = store.sync();
@@ -26,20 +29,17 @@ pub fn SettingsPanel() -> Element {
 
   rsx! {
       div { class: "flex flex-col gap-5",
-          div {
-              div { class: "mb-2 text-xs font-medium uppercase tracking-wider text-[var(--secondary-color-5)]",
-                  "Appearance"
-              }
+          SettingsSession { title: "Appearance".to_string(),
               div { class: "flex gap-2",
                   button {
                       class: theme_card_class(theme == Theme::Dark),
-                      onclick: move |_| store.set_theme(Theme::Dark),
+                      onclick: move |_| settings.set_theme(Theme::Dark),
                       Moon { size: "20px" }
                       span { class: "text-sm font-medium", "Dark" }
                   }
                   button {
                       class: theme_card_class(theme == Theme::Light),
-                      onclick: move |_| store.set_theme(Theme::Light),
+                      onclick: move |_| settings.set_theme(Theme::Light),
                       Sun { size: "20px" }
                       span { class: "text-sm font-medium", "Light" }
                   }
@@ -61,7 +61,7 @@ pub fn SettingsPanel() -> Element {
                                   span {
                                       key: "{hex}",
                                       style,
-                                      onclick: move |_| store.set_accent(hex.to_string()),
+                                      onclick: move |_| settings.set_accent(hex.to_string()),
                                   }
                               }
                           }
@@ -69,10 +69,7 @@ pub fn SettingsPanel() -> Element {
                   }
               }
           }
-          div {
-              div { class: "mb-2 text-xs font-medium uppercase tracking-wider text-[var(--secondary-color-5)]",
-                  "Sync & storage"
-              }
+          SettingsSession { title: "Sync & storage".to_string(),
               div { class: "flex items-center gap-3 rounded-lg bg-[var(--primary-color-3)] p-3",
                   if sync == SyncStatus::Synced {
                       CloudCheck { size: "20px", stroke: sync_icon_color }
@@ -87,7 +84,7 @@ pub fn SettingsPanel() -> Element {
                       variant: ButtonVariant::Secondary,
                       size: ButtonSize::Sm,
                       class: "border border-[var(--primary-color-6)] bg-transparent hover:bg-[color-mix(in_srgb,var(--secondary-color)_5%,transparent)]",
-                      onclick: move |_| store.toggle_sync(),
+                      onclick: move |_| settings.toggle_sync(),
                       if sync == SyncStatus::Offline { "Go online" } else { "Go offline" }
                   }
               }
@@ -99,10 +96,7 @@ pub fn SettingsPanel() -> Element {
                   }
               }
           }
-          div {
-              div { class: "mb-2 text-xs font-medium uppercase tracking-wider text-[var(--secondary-color-5)]",
-                  "Editor"
-              }
+          SettingsSession { title: "Editor".to_string(),
               div { class: "flex flex-col gap-2 text-sm text-[var(--secondary-color)]",
                   div { class: "flex items-center gap-2",
                       Check { size: "14px", stroke: "var(--accent)" }
@@ -118,10 +112,7 @@ pub fn SettingsPanel() -> Element {
                   }
               }
           }
-          div {
-              div { class: "mb-2 text-xs font-medium uppercase tracking-wider text-[var(--secondary-color-5)]",
-                  "About"
-              }
+          SettingsSession { title: "About".to_string(),
               div { class: "flex items-center gap-3 rounded-lg bg-[var(--primary-color-3)] p-3",
                   Notebook { size: "20px", stroke: "var(--accent)" }
                   div { class: "flex-1",

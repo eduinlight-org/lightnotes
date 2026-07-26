@@ -279,12 +279,49 @@ Every component gets its own directory under `components/`, named after the comp
 ```
 components/
 	hero/
-		mod.rs        // mod hero; pub use hero::Hero; (+ mod use_hero; pub use use_hero::use_hero; if a hook exists)
+		mod.rs        // mod hero; pub use hero::Hero; (+ mod use_hero; if a hook exists)
 		hero.rs       // the component itself — rendering only
 		use_hero.rs   // optional: signals/state/business logic the component needs, exposed as a use_hero hook
 ```
 
 * The component file is named after the component (e.g. `login_button/login_button.rs`), not a generic `component.rs`.
 * `mod.rs` only declares submodules and re-exports — no logic there.
-* If a component has no state or logic to extract, omit `use_<name>.rs` — don't create an empty hook file.
+* `mod use_hero;` has no matching `pub use` — the hook is consumed directly by its sibling component file via `use super::use_hero::use_hero;`, not re-exported crate-wide.
+* Any component that reads global/context state (`use_notes`, `use_ui`, `use_is_mobile`, `use_route`, etc.) and has at least one handler gets a `use_<name>.rs` hook — even a single `use_signal` plus one-line handler qualifies. The hook owns the state reads, `use_effect`/`use_signal` calls, and any handler that mutates state or navigates; the component file only destructures/aliases the hook's return value and renders.
+* Pure rendering-derivation helpers (class-name functions like `theme_card_class`, icon-lookup match functions like `folder_icon`, markdown rendering, etc.) stay as private free functions in the component file even when a hook exists — they take already-known values and return markup/strings, they don't read state.
+* A hook's state struct is a `#[derive(Clone, Copy)] pub struct FooState { pub field: ... }` (all fields `pub` since the component reads them by name) with an `impl FooState` block holding `&mut self`/`&self` methods for anything beyond a trivial one-line passthrough (e.g. `select_filter`, `submit`, `create_note`). A trivial single-call mutation (`store.toggle_sync()`) can stay inline via an aliased local (`let mut store = state.store;`) instead of needing its own wrapper method.
+* If a component has no state or logic to extract (no global reads, or only trivial one-liners with no store, e.g. `LoginButton`, `SearchInput`), omit `use_<name>.rs` — don't create an empty hook file.
 * The parent `components/mod.rs` declares each component the same way it would a flat file: `mod hero; pub use hero::Hero;` — Rust resolves this to `hero/mod.rs` automatically.
+
+## Props Struct Pattern
+
+This applies to app-owned components (`packages/app/src/components`, `apps/*/src/components`) — not `packages/ui`.
+
+Any component that takes props (including just `children`) defines an explicit `pub struct FooProps` instead of relying on `#[component]` to infer one from inline named arguments:
+
+```rust
+#[derive(PartialEq, Clone, Props)]
+pub struct FooProps {
+	pub title: String,
+	pub children: Element,
+}
+
+#[component]
+pub fn Foo(props: FooProps) -> Element {
+	let FooProps { title, children } = props;
+
+	rsx! {
+		div {
+			"{title}"
+			{children}
+		}
+	}
+}
+```
+
+* Struct name is `<ComponentName>Props`.
+* Both the struct and its fields must be `pub` — `#[component]` passes a single struct argument through unchanged, but the `rsx!` builder at the call site needs to reach the struct and its fields, so private visibility fails to compile once the component is used from a sibling module.
+* `children: Element` is a normal struct field, not a separate function parameter.
+* `#[props(default)]` and `#[props(extends = ...)]` attributes go on the struct fields exactly as they would on inline `#[component]` args.
+* Destructure `props` on the first line of the function body so the rest of the body reads the same as it would with inline args.
+* Zero-prop components (`fn Foo() -> Element`) need no struct.

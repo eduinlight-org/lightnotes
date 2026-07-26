@@ -1,8 +1,7 @@
-use crate::state::{use_notes, Note};
-use crate::Route;
+use super::use_note_list_item::use_note_list_item;
+use crate::state::Note;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{Pin, Star};
-use ui::components::sidebar::use_is_mobile;
 
 fn snippet(markdown: &str) -> String {
   let plain: String = markdown
@@ -13,20 +12,22 @@ fn snippet(markdown: &str) -> String {
   plain.chars().take(120).collect()
 }
 
+#[derive(PartialEq, Clone, Props)]
+pub struct NoteListItemProps {
+  pub note: Note,
+  pub is_active: bool,
+}
+
 #[component]
-pub fn NoteListItem(note: Note, is_active: bool) -> Element {
-  let mut store = use_notes();
-  let is_mobile = use_is_mobile();
+pub fn NoteListItem(props: NoteListItemProps) -> Element {
+  let NoteListItemProps { note, is_active } = props;
+  let mut item = use_note_list_item();
+  let is_mobile = item.is_mobile;
   let note_id = note.id.clone();
   let star_note_id = note.id.clone();
   let pin_note_id = note.id.clone();
   let snippet_text = snippet(&note.content);
-  let tags: Vec<_> = note
-    .tag_ids
-    .iter()
-    .filter_map(|id| store.tag_name(id))
-    .take(3)
-    .collect();
+  let tags = item.tags(&note);
 
   let container_class = if is_mobile() {
     "mb-[9px] flex cursor-pointer flex-col gap-[6px] rounded-[12px] bg-[var(--primary-color-2)] px-[14px] py-[14px] shadow-[0_0_0_1px_var(--primary-color-6)]"
@@ -60,9 +61,7 @@ pub fn NoteListItem(note: Note, is_active: bool) -> Element {
   rsx! {
       article {
           class: container_class,
-          onclick: move |_| {
-              navigator().push(Route::NoteEditor { note_id: note_id.clone() });
-          },
+          onclick: move |_| item.open(&note_id),
           div { class: "flex items-start gap-2",
               div { class: title_class,
                   if note.title.is_empty() { "Untitled" } else { "{note.title}" }
@@ -73,7 +72,7 @@ pub fn NoteListItem(note: Note, is_active: bool) -> Element {
                       "aria-label": if note.starred { "Remove from Starred" } else { "Add to Starred" },
                       onclick: move |event: MouseEvent| {
                           event.stop_propagation();
-                          store.toggle_note_star(&star_note_id);
+                          item.toggle_star(&star_note_id);
                       },
                       Star {
                           size: icon_size,
@@ -86,7 +85,7 @@ pub fn NoteListItem(note: Note, is_active: bool) -> Element {
                       "aria-label": if note.pinned { "Unpin from top" } else { "Pin to top of list" },
                       onclick: move |event: MouseEvent| {
                           event.stop_propagation();
-                          store.toggle_note_pin(&pin_note_id);
+                          item.toggle_pin(&pin_note_id);
                       },
                       Pin {
                           size: icon_size,

@@ -1,8 +1,17 @@
 use dioxus::prelude::*;
 use ui::components::navbar::Navbar;
 
+#[derive(PartialEq, Clone, Props)]
+pub struct AppBarProps {
+  pub brand: Element,
+  pub children: Element,
+  pub actions: Element,
+}
+
 #[component]
-pub fn AppBar(brand: Element, children: Element, actions: Element) -> Element {
+pub fn AppBar(props: AppBarProps) -> Element {
+  let AppBarProps { brand, children, actions } = props;
+
   rsx! {
       header {
           class: "sticky top-0 z-50 flex items-center gap-2 overflow-x-auto border-b border-[var(--primary-color-6)] bg-[var(--primary-color-1)]/90 px-3 py-3 backdrop-blur sm:gap-6 sm:px-6",

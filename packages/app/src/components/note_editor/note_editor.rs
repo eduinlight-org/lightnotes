@@ -1,15 +1,19 @@
 use super::use_note_editor::{use_note_editor, EditorView, EDITOR_TEXTAREA_ID};
+use crate::components::{ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
 use crate::state::{FolderIcon, Note};
 use crate::Route;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{
-  Archive, ArrowLeft, Bold, BookOpen, Briefcase, ChevronDown, Code, Eye, FileText, Heading1,
-  Inbox, Italic, Link as LinkIcon, List, Notebook, Pin, Quote, SquareCheck, Star, Trash2, User, X,
+  Archive, ArrowLeft, Bold, Bookmark, BookOpen, Briefcase, Calendar, Camera, ChevronDown, Code,
+  Eye, FileText, Gift, Globe, Heading1, Heart, House, Inbox, Italic, Link as LinkIcon, List,
+  Lock, Music, Notebook, Palette, Pin, Quote, Rocket, Settings, SquareCheck, Star, Trash2, User,
+  X,
 };
 use pulldown_cmark::{html, Options, Parser};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 use ui::components::input::Input;
-use ui::components::popover::{ContentAlign, PopoverContent, PopoverRoot, PopoverTrigger};
+use ui::components::popover::ContentAlign;
+use ui::components::sidebar::use_is_mobile;
 use ui::components::textarea::Textarea;
 
 const TOOLBAR_BUTTON_CLASS: &str = "text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] hover:text-[var(--accent)]";
@@ -24,6 +28,20 @@ fn folder_icon(icon: FolderIcon) -> Element {
     FolderIcon::BookOpen => rsx! { BookOpen { size: "16px" } },
     FolderIcon::Notebook => rsx! { Notebook { size: "16px" } },
     FolderIcon::Archive => rsx! { Archive { size: "16px" } },
+    FolderIcon::House => rsx! { House { size: "16px" } },
+    FolderIcon::Star => rsx! { Star { size: "16px" } },
+    FolderIcon::Heart => rsx! { Heart { size: "16px" } },
+    FolderIcon::Settings => rsx! { Settings { size: "16px" } },
+    FolderIcon::Calendar => rsx! { Calendar { size: "16px" } },
+    FolderIcon::Camera => rsx! { Camera { size: "16px" } },
+    FolderIcon::Music => rsx! { Music { size: "16px" } },
+    FolderIcon::Code => rsx! { Code { size: "16px" } },
+    FolderIcon::Palette => rsx! { Palette { size: "16px" } },
+    FolderIcon::Gift => rsx! { Gift { size: "16px" } },
+    FolderIcon::Globe => rsx! { Globe { size: "16px" } },
+    FolderIcon::Lock => rsx! { Lock { size: "16px" } },
+    FolderIcon::Rocket => rsx! { Rocket { size: "16px" } },
+    FolderIcon::Bookmark => rsx! { Bookmark { size: "16px" } },
   }
 }
 
@@ -54,10 +72,17 @@ fn segment_tab_class(active: bool) -> &'static str {
   }
 }
 
+#[derive(PartialEq, Clone, Props)]
+pub struct NoteEditorPanelProps {
+  pub note: Note,
+}
+
 #[component]
-pub fn NoteEditorPanel(note: Note) -> Element {
+pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
+  let NoteEditorPanelProps { note } = props;
   let mut editor = use_note_editor();
   let mut store = editor.store;
+  let is_mobile = use_is_mobile();
   let note_id = note.id.clone();
   let view = (editor.view)();
   let folder_name = store
@@ -135,24 +160,33 @@ pub fn NoteEditorPanel(note: Note) -> Element {
               }
           }
           div { class: "mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--secondary-color-5)]",
-              PopoverRoot {
+              ResponsivePopoverRoot {
                   open: (editor.folder_picker_open)(),
                   on_open_change: move |value| editor.folder_picker_open.set(value),
-                  PopoverTrigger {
+                  ResponsivePopoverTrigger {
                       class: "inline-flex items-center gap-[5px] rounded-md border-none bg-transparent px-[6px] py-[2px] -m-[6px] text-[var(--secondary-color-5)] hover:bg-[color-mix(in_srgb,var(--secondary-color)_8%,transparent)] hover:text-[var(--accent)]",
                       title: "Move to folder",
                       FileText { size: "13px" }
                       "{folder_name}"
                       ChevronDown { size: "11px" }
                   }
-                  PopoverContent {
+                  ResponsivePopoverContent {
+                      title: "Move to folder",
                       align: ContentAlign::Start,
                       class: "w-52 items-stretch gap-1 p-1.5 text-left",
-                      div { class: "px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-[var(--secondary-color-5)]",
-                          "Move to folder"
+                      if !is_mobile() {
+                          div { class: "px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-[var(--secondary-color-5)]",
+                              "Move to folder"
+                          }
                       }
                       div {
-                          class: if note.folder_id.is_none() { "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)]" } else { "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-[var(--secondary-color)] hover:bg-[var(--primary-color-4)]" },
+                          class: if is_mobile() {
+                              if note.folder_id.is_none() { "flex cursor-pointer items-center gap-2 rounded-[11px] px-[14px] py-[13px] text-sm bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)]" } else { "flex cursor-pointer items-center gap-2 rounded-[11px] px-[14px] py-[13px] text-sm text-[var(--secondary-color)] bg-[var(--primary-color-2)]" }
+                          } else if note.folder_id.is_none() {
+                              "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)]"
+                          } else {
+                              "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-[var(--secondary-color)] hover:bg-[var(--primary-color-4)]"
+                          },
                           onclick: {
                               let note_id = note_id.clone();
                               move |_| {
@@ -167,7 +201,13 @@ pub fn NoteEditorPanel(note: Note) -> Element {
                           {
                               let folder_id = folder.id.clone();
                               let is_active = note.folder_id.as_deref() == Some(folder.id.as_str());
-                              let class = if is_active {
+                              let class = if is_mobile() {
+                                  if is_active {
+                                      "flex cursor-pointer items-center gap-2 rounded-[11px] px-[14px] py-[13px] text-sm bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)]"
+                                  } else {
+                                      "flex cursor-pointer items-center gap-2 rounded-[11px] px-[14px] py-[13px] text-sm text-[var(--secondary-color)] bg-[var(--primary-color-2)]"
+                                  }
+                              } else if is_active {
                                   "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)]"
                               } else {
                                   "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-[var(--secondary-color)] hover:bg-[var(--primary-color-4)]"
@@ -201,7 +241,11 @@ pub fn NoteEditorPanel(note: Note) -> Element {
                   if let Some(name) = store.tag_name(tag_id) {
                       span {
                           key: "{tag_id}",
-                          class: "inline-flex items-center gap-1 rounded-md border border-[var(--primary-color-6)] px-2 py-0.5 text-[var(--secondary-color)]",
+                          class: if is_mobile() {
+                              "inline-flex items-center gap-1.5 rounded-full border border-[var(--primary-color-6)] px-3 py-1 text-[var(--secondary-color)]"
+                          } else {
+                              "inline-flex items-center gap-1 rounded-md border border-[var(--primary-color-6)] px-2 py-0.5 text-[var(--secondary-color)]"
+                          },
                           "#{name}"
                           button {
                               "aria-label": "Remove tag",
@@ -210,20 +254,28 @@ pub fn NoteEditorPanel(note: Note) -> Element {
                                   let tag_id = tag_id.clone();
                                   move |_| store.remove_note_tag(&note_id, &tag_id)
                               },
-                              X { size: "11px" }
+                              X { size: if is_mobile() { "14px" } else { "11px" } }
                           }
                       }
                   }
               }
-              PopoverRoot {
+              ResponsivePopoverRoot {
                   open: (editor.tag_picker_open)(),
                   on_open_change: move |value| editor.tag_picker_open.set(value),
-                  PopoverTrigger {
+                  ResponsivePopoverTrigger {
                       class: "inline-flex items-center gap-[4px] rounded-md border-none bg-transparent px-[6px] py-[2px] text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]",
                       "+ tag"
                   }
-                  PopoverContent { align: ContentAlign::Start, class: "w-56 items-stretch gap-2 p-2 text-left",
-                      div { class: "flex h-8 items-center gap-1.5 rounded-lg border border-[var(--primary-color-6)] bg-[var(--primary-color-1)] px-[9px] focus-within:border-[var(--accent)]",
+                  ResponsivePopoverContent {
+                      title: "Add tag",
+                      align: ContentAlign::Start,
+                      class: "w-56 items-stretch gap-2 p-2 text-left",
+                      div {
+                          class: if is_mobile() {
+                              "flex h-11 items-center gap-1.5 rounded-[11px] border border-[var(--primary-color-6)] bg-[var(--primary-color-2)] px-[13px] focus-within:border-[var(--accent)]"
+                          } else {
+                              "flex h-8 items-center gap-1.5 rounded-lg border border-[var(--primary-color-6)] bg-[var(--primary-color-1)] px-[9px] focus-within:border-[var(--accent)]"
+                          },
                           span { class: "flex-none text-[var(--secondary-color-5)]", "#" }
                           Input {
                               class: "h-full flex-1 border-none bg-transparent p-0 text-[13px] shadow-none [outline:none] hover:bg-transparent focus:bg-transparent focus:shadow-none",
@@ -245,10 +297,15 @@ pub fn NoteEditorPanel(note: Note) -> Element {
                               {
                                   let tag_id = tag.id.clone();
                                   let note_id = note_id.clone();
+                                  let chip_class = if is_mobile() {
+                                      "cursor-pointer rounded-full border border-[var(--primary-color-6)] px-3 py-1.5 text-sm text-[var(--secondary-color)]"
+                                  } else {
+                                      "cursor-pointer rounded-md border border-[var(--primary-color-6)] px-2 py-1 text-xs text-[var(--secondary-color)]"
+                                  };
                                   rsx! {
                                       span {
                                           key: "{tag.id}",
-                                          class: "cursor-pointer rounded-md border border-[var(--primary-color-6)] px-2 py-1 text-xs text-[var(--secondary-color)]",
+                                          class: chip_class,
                                           onclick: move |_| store.add_note_tag(&note_id, tag_id.clone()),
                                           "#{tag.name}"
                                       }

@@ -9,12 +9,17 @@ pub enum SearchInputSize {
   Large,
 }
 
+#[derive(PartialEq, Clone, Props)]
+pub struct SearchInputProps {
+  pub value: String,
+  pub on_search: EventHandler<String>,
+  #[props(default)]
+  pub size: SearchInputSize,
+}
+
 #[component]
-pub fn SearchInput(
-  value: String,
-  on_search: EventHandler<String>,
-  #[props(default)] size: SearchInputSize,
-) -> Element {
+pub fn SearchInput(props: SearchInputProps) -> Element {
+  let SearchInputProps { value, on_search, size } = props;
   let has_value = !value.trim().is_empty();
   let (wrapper_class, icon_size, text_size, clear_size) = match size {
     SearchInputSize::Default => (

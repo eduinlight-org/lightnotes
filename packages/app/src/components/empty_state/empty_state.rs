@@ -1,12 +1,11 @@
-use crate::state::use_notes;
-use crate::Route;
+use super::use_empty_state::use_empty_state;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{NotebookPen, Plus};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 
 #[component]
 pub fn EmptyState() -> Element {
-  let mut store = use_notes();
+  let mut empty_state = use_empty_state();
 
   rsx! {
       section {
@@ -24,10 +23,7 @@ pub fn EmptyState() -> Element {
               variant: ButtonVariant::Primary,
               size: ButtonSize::Lg,
               class: "gap-2 border border-[var(--accent)] bg-transparent text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]",
-              onclick: move |_| {
-                  let note_id = store.create_note();
-                  navigator().push(Route::NoteEditor { note_id });
-              },
+              onclick: move |_| empty_state.create_note(),
               Plus { size: "16px" }
               "New note"
           }

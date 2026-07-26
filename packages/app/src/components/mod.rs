@@ -31,6 +31,9 @@ pub use note_list_item::NoteListItem;
 mod notes_shell;
 pub use notes_shell::NotesShell;
 
+mod responsive_popover;
+pub use responsive_popover::{ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
+
 mod section_shell;
 pub use section_shell::SectionShell;
 

@@ -1,27 +1,23 @@
-use crate::state::{use_notes, use_ui, NoteFilter};
-use crate::Route;
+use super::use_tag_manager_dialog::{use_tag_manager_dialog, use_tag_manager_panel};
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{Tag as TagIcon, Trash2, X};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 use ui::components::dialog::{Dialog, DialogDescription, DialogTitle};
 use ui::components::input::Input;
-use ui::components::sidebar::use_is_mobile;
+
+#[derive(PartialEq, Clone, Props)]
+pub struct TagManagerPanelProps {
+  pub on_select: Option<EventHandler<()>>,
+}
 
 #[component]
-pub fn TagManagerPanel(on_select: Option<EventHandler<()>>) -> Element {
-  let mut store = use_notes();
-  let mut draft = use_signal(String::new);
+pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
+  let TagManagerPanelProps { on_select } = props;
+  let mut panel = use_tag_manager_panel(on_select);
+  let mut store = panel.store;
+  let mut draft = panel.draft;
+  let is_mobile = panel.is_mobile;
   let tags = store.tags();
-  let is_mobile = use_is_mobile();
-
-  let mut submit = move || {
-    let name = draft();
-    if name.trim().is_empty() {
-      return;
-    }
-    store.create_tag(name);
-    draft.set(String::new());
-  };
 
   let input_row_class = if is_mobile() {
     "flex h-11 items-center gap-2 rounded-[11px] border border-[var(--primary-color-6)] bg-[var(--primary-color-2)] px-[13px] focus-within:border-[var(--accent)]"
@@ -52,7 +48,7 @@ pub fn TagManagerPanel(on_select: Option<EventHandler<()>>) -> Element {
                   oninput: move |event: FormEvent| draft.set(event.value()),
                   onkeydown: move |event: KeyboardEvent| {
                       if event.key() == Key::Enter {
-                          submit();
+                          panel.submit();
                       }
                   },
               }
@@ -60,7 +56,7 @@ pub fn TagManagerPanel(on_select: Option<EventHandler<()>>) -> Element {
                   variant: ButtonVariant::Primary,
                   size: ButtonSize::Sm,
                   class: "flex-none border border-[var(--accent)] bg-transparent text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]",
-                  onclick: move |_| submit(),
+                  onclick: move |_| panel.submit(),
                   "Add"
               }
           }
@@ -84,13 +80,7 @@ pub fn TagManagerPanel(on_select: Option<EventHandler<()>>) -> Element {
                               class: row_class,
                               onclick: {
                                   let tag_id = tag_id.clone();
-                                  move |_| {
-                                      store.set_filter(NoteFilter::Tag(tag_id.clone()));
-                                      navigator().push(Route::Notes {});
-                                      if let Some(handler) = &on_select {
-                                          handler.call(());
-                                      }
-                                  }
+                                  move |_| panel.select_tag(tag_id.clone())
                               },
                               span { class: "h-2 w-2 flex-none rounded-full bg-[var(--accent)]" }
                               span {
@@ -120,30 +110,29 @@ pub fn TagManagerPanel(on_select: Option<EventHandler<()>>) -> Element {
 
 #[component]
 pub fn TagManagerDialog() -> Element {
-  let mut ui = use_ui();
-  let open = (ui.tags_open)();
+  let mut dialog = use_tag_manager_dialog();
 
   rsx! {
       Dialog {
-          open,
-          on_open_change: move |value| ui.tags_open.set(value),
+          open: dialog.open(),
+          on_open_change: move |value| dialog.set_open(value),
           class: "max-h-[calc(100vh-32px)] flex flex-col overflow-hidden",
           div { class: "flex flex-none items-center justify-between",
               DialogTitle { class: "text-[var(--secondary-color)] font-medium!", "Manage tags" }
               button {
                   "aria-label": "Close",
-                  onclick: move |_| ui.tags_open.set(false),
+                  onclick: move |_| dialog.close(),
                   X { size: "18px", stroke: "var(--secondary-color-5)" }
               }
           }
           DialogDescription { class: "sr-only", "Create, filter by, or delete tags" }
-          TagManagerPanel { on_select: move |_| ui.tags_open.set(false) }
+          TagManagerPanel { on_select: move |_| dialog.close() }
           div { class: "flex flex-none justify-end pt-2",
               Button {
                   variant: ButtonVariant::Secondary,
                   size: ButtonSize::Sm,
                   class: "border border-[var(--primary-color-6)] bg-transparent hover:bg-[color-mix(in_srgb,var(--secondary-color)_5%,transparent)]",
-                  onclick: move |_| ui.tags_open.set(false),
+                  onclick: move |_| dialog.close(),
                   "Close"
               }
           }
