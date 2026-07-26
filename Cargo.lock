@@ -69,7 +69,7 @@ version = "0.1.0"
 dependencies = [
  "dioxus",
  "dioxus-icons",
- "pulldown-cmark",
+ "editor",
  "serde",
  "serde_json",
  "ui",
@@ -1851,6 +1851,20 @@ name = "dunce"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
+
+[[package]]
+name = "editor"
+version = "0.1.0"
+dependencies = [
+ "dioxus",
+ "serde_json",
+ "taino-edit-core",
+ "taino-edit-dom",
+ "taino-edit-extensions",
+ "taino-edit-table-view",
+ "wasm-bindgen",
+ "web-sys",
+]
 
 [[package]]
 name = "either"
@@ -4387,15 +4401,8 @@ checksum = "e9f068eba8e7071c5f9511831b44f32c740d5adf574e990f946ddb53db2f314e"
 dependencies = [
  "bitflags 2.13.1",
  "memchr",
- "pulldown-cmark-escape",
  "unicase",
 ]
-
-[[package]]
-name = "pulldown-cmark-escape"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "007d8adb5ddab6f8e3f491ac63566a7d5002cc7ed73901f72057943fa71ae1ae"
 
 [[package]]
 name = "pulp"
@@ -4769,6 +4776,18 @@ dependencies = [
  "getrandom 0.2.17",
  "libredox",
  "thiserror 2.0.19",
+]
+
+[[package]]
+name = "regex"
+version = "1.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f020237b6c8eed93db2e2cb53c00c60a8e1bc73da7d073199a1180401450218d"
+dependencies = [
+ "aho-corasick",
+ "memchr",
+ "regex-automata",
+ "regex-syntax",
 ]
 
 [[package]]
@@ -5498,6 +5517,52 @@ dependencies = [
  "pkg-config",
  "toml",
  "version-compare",
+]
+
+[[package]]
+name = "taino-edit-core"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26ca1b9a07e0cb5ea5883a07374fcd9eaac0c096ef6a4da853fc5e191100b5d3"
+dependencies = [
+ "pulldown-cmark",
+ "regex",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "taino-edit-dom"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4a3c70a8abfb9421335faa145327b1b807e6daa7fa82a0e53b2e75b53d3c7f0"
+dependencies = [
+ "js-sys",
+ "taino-edit-core",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "taino-edit-extensions"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad971a05d644c5a92a706036c1bbc3aab80e927b26c50bec646e1c453769f62d"
+dependencies = [
+ "taino-edit-core",
+]
+
+[[package]]
+name = "taino-edit-table-view"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42bd496e23d0347326808d59bc421e05f0342b34b46f144edaf2ed9ab79b4113"
+dependencies = [
+ "taino-edit-core",
+ "taino-edit-dom",
+ "taino-edit-extensions",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

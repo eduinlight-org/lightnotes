@@ -1,24 +1,22 @@
-use super::use_note_editor::{use_note_editor, EditorView, EDITOR_TEXTAREA_ID};
+use super::use_note_editor::use_note_editor;
 use crate::components::{ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
 use crate::state::{FolderIcon, Note};
 use crate::Route;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{
-  Archive, ArrowLeft, Bold, Bookmark, BookOpen, Briefcase, Calendar, Camera, ChevronDown, Code,
-  Eye, FileText, Gift, Globe, Heading1, Heart, House, Inbox, Italic, Link as LinkIcon, List,
-  Lock, Music, Notebook, Palette, Pin, Quote, Rocket, Settings, SquareCheck, Star, Trash2, User,
-  X,
+  Archive, ArrowLeft, Bold, Bookmark, BookOpen, Briefcase, Calendar, Camera, ChevronDown, Code, FileText, Gift, Globe,
+  Heading1, Heart, House, Inbox, Italic, Link as LinkIcon, List, Lock, Music, Notebook, Palette, Pin, Quote, Rocket,
+  Settings, Star, Trash2, User, X,
 };
-use pulldown_cmark::{html, Options, Parser};
+use editor::MarkdownEditorView;
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 use ui::components::input::Input;
 use ui::components::popover::ContentAlign;
 use ui::components::sidebar::use_is_mobile;
-use ui::components::textarea::Textarea;
 
 const TOOLBAR_BUTTON_CLASS: &str = "text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] hover:text-[var(--accent)]";
 
-const MARKDOWN_PREVIEW_CLASS: &str ="text-[var(--secondary-color)] [&_h1]:mb-3 [&_h1]:mt-4 [&_h1]:text-2xl [&_h1]:font-medium [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-medium [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-lg [&_h3]:font-medium [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic [&_code]:rounded [&_code]:bg-[var(--primary-color-5)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px] [&_pre]:mb-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[var(--primary-color-5)] [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_a]:text-[var(--accent)] [&_a]:underline [&_blockquote]:mb-3 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--accent)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-[var(--secondary-color-5)] [&_hr]:my-4 [&_hr]:border-[var(--primary-color-6)] [&_ul.contains-task-list]:list-none [&_ul.contains-task-list]:pl-1 [&_li.task-list-item]:flex [&_li.task-list-item]:items-start [&_li.task-list-item]:gap-2 [&_li.task-list-item_input]:mt-1";
+const EDITOR_CONTENT_CLASS: &str ="text-[var(--secondary-color)] [&_h1]:mb-3 [&_h1]:mt-4 [&_h1]:text-2xl [&_h1]:font-medium [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-medium [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-lg [&_h3]:font-medium [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic [&_code]:rounded [&_code]:bg-[var(--primary-color-5)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px] [&_pre]:mb-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[var(--primary-color-5)] [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_a]:text-[var(--accent)] [&_a]:underline [&_blockquote]:mb-3 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--accent)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-[var(--secondary-color-5)] [&_.taino-editor]:h-full [&_.taino-editor]:min-h-full [&_.taino-editor]:outline-none";
 
 fn folder_icon(icon: FolderIcon) -> Element {
   match icon {
@@ -45,31 +43,8 @@ fn folder_icon(icon: FolderIcon) -> Element {
   }
 }
 
-fn render_markdown(markdown: &str) -> String {
-  if markdown.trim().is_empty() {
-    return "<p class=\"italic opacity-50\">Nothing here yet. Start writing…</p>".to_string();
-  }
-
-  let mut options = Options::empty();
-  options.insert(Options::ENABLE_STRIKETHROUGH);
-  options.insert(Options::ENABLE_TASKLISTS);
-
-  let parser = Parser::new_ext(markdown, options);
-  let mut html_output = String::new();
-  html::push_html(&mut html_output, parser);
-  html_output
-}
-
 fn word_count(content: &str) -> usize {
   content.split_whitespace().count()
-}
-
-fn segment_tab_class(active: bool) -> &'static str {
-  if active {
-    "rounded-md bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] px-2.5 py-1 text-xs font-medium text-[var(--accent)]"
-  } else {
-    "rounded-md px-2.5 py-1 text-xs font-medium text-[color-mix(in_srgb,var(--secondary-color)_62%,transparent)]"
-  }
 }
 
 #[derive(PartialEq, Clone, Props)]
@@ -84,7 +59,15 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
   let mut store = editor.store;
   let is_mobile = use_is_mobile();
   let note_id = note.id.clone();
-  let view = (editor.view)();
+
+  editor.sync_note(&note);
+
+  {
+    let mut editor = editor;
+    let note_id = note_id.clone();
+    use_effect(move || editor.save_if_changed(&note_id));
+  }
+
   let folder_name = store
     .folders()
     .into_iter()
@@ -322,10 +305,8 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   size: ButtonSize::IconXs,
                   class: TOOLBAR_BUTTON_CLASS,
                   "aria-label": "Bold",
-                  onclick: {
-                      let note_id = note_id.clone();
-                      move |_| editor.wrap_selection(&note_id, "**", "**")
-                  },
+                  onmousedown: move |event: MouseEvent| event.prevent_default(),
+                  onclick: move |_| editor.markdown_editor.toggle_bold(),
                   Bold { size: "14px" }
               }
               Button {
@@ -333,10 +314,8 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   size: ButtonSize::IconXs,
                   class: TOOLBAR_BUTTON_CLASS,
                   "aria-label": "Italic",
-                  onclick: {
-                      let note_id = note_id.clone();
-                      move |_| editor.wrap_selection(&note_id, "_", "_")
-                  },
+                  onmousedown: move |event: MouseEvent| event.prevent_default(),
+                  onclick: move |_| editor.markdown_editor.toggle_italic(),
                   Italic { size: "14px" }
               }
               Button {
@@ -344,10 +323,8 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   size: ButtonSize::IconXs,
                   class: TOOLBAR_BUTTON_CLASS,
                   "aria-label": "Heading",
-                  onclick: {
-                      let note_id = note_id.clone();
-                      move |_| editor.line_prefix(&note_id, "## ")
-                  },
+                  onmousedown: move |event: MouseEvent| event.prevent_default(),
+                  onclick: move |_| editor.markdown_editor.set_heading(2),
                   Heading1 { size: "14px" }
               }
               span { class: "mx-1 h-4 w-px bg-[var(--primary-color-6)]" }
@@ -356,32 +333,17 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   size: ButtonSize::IconXs,
                   class: TOOLBAR_BUTTON_CLASS,
                   "aria-label": "Bulleted list",
-                  onclick: {
-                      let note_id = note_id.clone();
-                      move |_| editor.line_prefix(&note_id, "- ")
-                  },
+                  onmousedown: move |event: MouseEvent| event.prevent_default(),
+                  onclick: move |_| editor.markdown_editor.toggle_bullet_list(),
                   List { size: "14px" }
               }
               Button {
                   variant: ButtonVariant::Ghost,
                   size: ButtonSize::IconXs,
                   class: TOOLBAR_BUTTON_CLASS,
-                  "aria-label": "Checklist",
-                  onclick: {
-                      let note_id = note_id.clone();
-                      move |_| editor.line_prefix(&note_id, "- [ ] ")
-                  },
-                  SquareCheck { size: "14px" }
-              }
-              Button {
-                  variant: ButtonVariant::Ghost,
-                  size: ButtonSize::IconXs,
-                  class: TOOLBAR_BUTTON_CLASS,
                   "aria-label": "Quote",
-                  onclick: {
-                      let note_id = note_id.clone();
-                      move |_| editor.line_prefix(&note_id, "> ")
-                  },
+                  onmousedown: move |event: MouseEvent| event.prevent_default(),
+                  onclick: move |_| editor.markdown_editor.toggle_blockquote(),
                   Quote { size: "14px" }
               }
               Button {
@@ -389,10 +351,8 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   size: ButtonSize::IconXs,
                   class: TOOLBAR_BUTTON_CLASS,
                   "aria-label": "Code",
-                  onclick: {
-                      let note_id = note_id.clone();
-                      move |_| editor.wrap_selection(&note_id, "`", "`")
-                  },
+                  onmousedown: move |event: MouseEvent| event.prevent_default(),
+                  onclick: move |_| editor.markdown_editor.toggle_code(),
                   Code { size: "14px" }
               }
               Button {
@@ -400,52 +360,20 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   size: ButtonSize::IconXs,
                   class: TOOLBAR_BUTTON_CLASS,
                   "aria-label": "Link",
-                  onclick: {
-                      let note_id = note_id.clone();
-                      move |_| editor.wrap_selection(&note_id, "[", "](url)")
+                  onmousedown: move |event: MouseEvent| event.prevent_default(),
+                  onclick: move |_| {
+                      if let Some(href) = editor::prompt("URL:") {
+                          editor.markdown_editor.set_link(href);
+                      }
                   },
                   LinkIcon { size: "14px" }
-              }
-              div { class: "ml-auto flex items-center gap-1 rounded-lg bg-[color-mix(in_srgb,var(--secondary-color)_6%,transparent)] p-0.5",
-                  button {
-                      class: format!("hidden md:inline-flex {}", segment_tab_class(view == EditorView::Live)),
-                      onclick: move |_| editor.view.set(EditorView::Live),
-                      "Live"
-                  }
-                  button {
-                      class: segment_tab_class(view == EditorView::Source),
-                      onclick: move |_| editor.view.set(EditorView::Source),
-                      "Source"
-                  }
-                  button {
-                      class: segment_tab_class(view == EditorView::Preview),
-                      onclick: move |_| editor.view.set(EditorView::Preview),
-                      Eye { size: "12px" }
-                  }
               }
           }
           }
           div { class: "min-h-0 flex flex-1 overflow-hidden",
-              if matches!(view, EditorView::Live | EditorView::Source) {
-                  Textarea {
-                      id: EDITOR_TEXTAREA_ID,
-                      class: if view == EditorView::Live { "h-full w-1/2 resize-none border-r border-[var(--primary-color-6)] bg-transparent p-4 shadow-none" } else { "h-full w-full resize-none bg-transparent p-4 shadow-none" },
-                      placeholder: "Start writing in Markdown…",
-                      value: note.content.clone(),
-                      oninput: {
-                          let note_id = note_id.clone();
-                          move |event: FormEvent| store.set_note_content(&note_id, event.value())
-                      },
-                  }
-              }
-              if matches!(view, EditorView::Live | EditorView::Preview) {
-                  div {
-                      class: format!(
-                          "{MARKDOWN_PREVIEW_CLASS} {}",
-                          if view == EditorView::Live { "h-full w-1/2 overflow-y-auto p-4" } else { "h-full w-full overflow-y-auto p-4 md:p-6" },
-                      ),
-                      dangerous_inner_html: "{render_markdown(&note.content)}",
-                  }
+              MarkdownEditorView {
+                  handle: editor.markdown_editor,
+                  class: format!("{EDITOR_CONTENT_CLASS} h-full w-full overflow-y-auto p-4 md:p-6"),
               }
           }
       }
