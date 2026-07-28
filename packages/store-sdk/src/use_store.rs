@@ -65,14 +65,14 @@ impl StoreHandle {
   }
 }
 
-pub fn use_synced_store(config: StoreConfig) -> StoreHandle {
+pub fn use_synced_store(config: StoreConfig, offline: Signal<bool>) -> StoreHandle {
   use_hook(|| {
     let api = Arc::new(ApiClient::new(config.api_base_url.clone()));
     let handle = StoreHandle { cell: Arc::new(OnceCell::new()), db_path: config.db_path.clone(), api };
 
     let processor_handle = handle.clone();
     spawn(async move {
-      processor::run(processor_handle).await;
+      processor::run(processor_handle, offline).await;
     });
 
     handle

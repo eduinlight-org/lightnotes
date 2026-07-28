@@ -133,18 +133,6 @@ fn doc_from_html(schema: &Schema, html: &str) -> Node {
   }
 }
 
-pub async fn prompt(message: &'static str) -> Option<String> {
-  let mut eval = document::eval(
-    r#"
-    const [message] = await dioxus.recv();
-    dioxus.send(window.prompt(message));
-    "#,
-  );
-  let _ = eval.send((message,));
-  let result = eval.recv::<Option<String>>().await.ok().flatten();
-  result.filter(|value| !value.is_empty())
-}
-
 pub async fn selected_text() -> String {
   let mut eval = document::eval(
     r#"
@@ -517,20 +505,6 @@ impl MarkdownEditorHandle {
 
   pub fn select_all(&mut self) {
     self.exec("selectAll");
-  }
-
-  pub fn insert_image(&mut self, src: String, _alt: Option<String>) {
-    let html = format!("<img src=\"{}\">", src.replace('&', "&amp;").replace('"', "&quot;"));
-    self.sync_after(async move { insert_html(html).await });
-  }
-
-  pub fn insert_image_via_prompt(&mut self) {
-    let mut this = *self;
-    spawn(async move {
-      if let Some(src) = prompt("Image URL:").await {
-        this.insert_image(src, None);
-      }
-    });
   }
 
   pub fn align_left(&mut self) {

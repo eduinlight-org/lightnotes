@@ -7,7 +7,7 @@ use store_sdk::{use_synced_store, StoreConfig, StoreHandle};
 use sync_dto::QueuedChange;
 
 use super::dto::{api_base_url, compute_next_id, diff_folders, diff_notes, diff_tags, folder_from_dto, merge_server_changes, note_from_dto, tag_from_dto};
-use crate::state::notes::{Folder, Note, NotesStore, Tag};
+use crate::state::notes::{Folder, Note, NotesStore, SyncStatus, Tag};
 use crate::state::preferences::use_persisted_preferences;
 
 const BASE_BACKOFF_MS: u64 = 1000;
@@ -25,7 +25,12 @@ pub fn use_synced_notes() -> NotesStore {
   let mut store = use_context_provider(NotesStore::seed);
   use_persisted_preferences(store);
 
-  let handle = use_synced_store(StoreConfig::new(api_base_url()));
+  let mut offline = use_signal(|| false);
+  use_effect(move || {
+    offline.set(store.sync() == SyncStatus::Offline);
+  });
+
+  let handle = use_synced_store(StoreConfig::new(api_base_url()), offline);
   let mut loaded = use_signal(|| false);
   let mut device_id = use_signal(String::new);
   let mut last_synced_notes = use_signal(Vec::<Note>::new);
@@ -71,6 +76,11 @@ pub fn use_synced_notes() -> NotesStore {
       let mut backoff_ms = BASE_BACKOFF_MS;
 
       loop {
+        if *offline.peek() {
+          tokio::time::sleep(Duration::from_millis(BASE_BACKOFF_MS)).await;
+          continue;
+        }
+
         let mut stream = stream_handle.subscribe_changes(since);
 
         while let Some(event) = stream.next().await {

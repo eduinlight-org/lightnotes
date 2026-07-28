@@ -9,7 +9,7 @@ use dioxus::prelude::*;
 use dioxus_icons::lucide::{
   Archive, ArrowLeft, Bold, BookOpen, Bookmark, Briefcase, Calendar, Camera, CaseLower, CaseUpper,
   ChevronDown, Code, FileText, Gift, Globe, Heading1, Heading2, Heading3, Heart, House,
-  Image as ImageIcon, Inbox, Italic, Link as LinkIcon, List, ListIndentDecrease, ListOrdered, Lock,
+  Inbox, Italic, Link as LinkIcon, List, ListIndentDecrease, ListOrdered, Lock,
   Merge, Music, Notebook, Palette, Pilcrow, Pin, Quote, Redo, Rocket, Settings,
   SquareDashedMousePointer, Star, Table as TableIcon, TableCellsMerge, TableCellsSplit,
   TextAlignCenter, TextAlignEnd, TextAlignJustify, TextAlignStart, Trash2, Undo, Unlink, User, X,
@@ -398,7 +398,6 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
               span { class: "mx-1 h-4 w-px shrink-0 bg-[var(--primary-color-6)]" }
               {toolbar_button("Uppercase", "Convert selection to UPPERCASE", rsx! { CaseUpper { size: "14px" } }, move || editor.markdown_editor.to_uppercase())}
               {toolbar_button("Lowercase", "Convert selection to lowercase", rsx! { CaseLower { size: "14px" } }, move || editor.markdown_editor.to_lowercase())}
-              {toolbar_button("Insert image", "Insert image from URL…", rsx! { ImageIcon { size: "14px" } }, move || editor.markdown_editor.insert_image_via_prompt())}
               span { class: "mx-1 h-4 w-px shrink-0 bg-[var(--primary-color-6)]" }
               {toolbar_button("Undo", "Undo", rsx! { Undo { size: "14px" } }, move || editor.markdown_editor.undo())}
               {toolbar_button("Redo", "Redo", rsx! { Redo { size: "14px" } }, move || editor.markdown_editor.redo())}

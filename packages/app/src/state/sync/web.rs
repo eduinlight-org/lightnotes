@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use futures_util::StreamExt;
 
 use super::dto::{api_base_url, diff_folders, diff_notes, diff_tags, merge_server_changes};
-use crate::state::notes::{Folder, Note, NotesStore, Tag};
+use crate::state::notes::{Folder, Note, NotesStore, SyncStatus, Tag};
 use crate::state::preferences::use_persisted_preferences;
 
 const BASE_BACKOFF_MS: u32 = 1000;
@@ -36,6 +36,11 @@ pub fn use_synced_notes() -> NotesStore {
       let mut backoff_ms = BASE_BACKOFF_MS;
 
       loop {
+        if store.sync() == SyncStatus::Offline {
+          gloo_timers::future::TimeoutFuture::new(BASE_BACKOFF_MS).await;
+          continue;
+        }
+
         let mut stream = stream_api.subscribe_changes(since);
 
         while let Some(event) = stream.next().await {
@@ -86,9 +91,10 @@ pub fn use_synced_notes() -> NotesStore {
 
   use_effect(move || {
     let is_loaded = loaded();
+    let is_offline = store.sync() == SyncStatus::Offline;
     let _ = store.snapshot();
 
-    if !is_loaded {
+    if !is_loaded || is_offline {
       return;
     }
 
