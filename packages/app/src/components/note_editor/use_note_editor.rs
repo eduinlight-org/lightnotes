@@ -43,6 +43,7 @@ impl NoteEditorState {
     let mut link_url_draft = self.link_url_draft;
     let mut link_dialog_open = self.link_dialog_open;
     dioxus::prelude::spawn(async move {
+      editor::save_selection_range().await;
       if let Some((text, href)) = editor::current_link().await {
         link_text_draft.set(text);
         link_url_draft.set(href);

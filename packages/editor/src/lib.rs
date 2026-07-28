@@ -155,13 +155,32 @@ pub async fn selected_text() -> String {
   eval.recv::<String>().await.unwrap_or_default()
 }
 
+pub async fn save_selection_range() {
+  let mut eval = document::eval(
+    r#"
+    const sel = window.getSelection();
+    window.__noteEditorSavedRange = sel && sel.rangeCount > 0 && !sel.isCollapsed
+      ? sel.getRangeAt(0).cloneRange()
+      : null;
+    dioxus.send(true);
+    "#,
+  );
+  let _ = eval.recv::<bool>().await;
+}
+
 pub async fn current_link() -> Option<(String, String)> {
   let mut eval = document::eval(
     r#"
     const sel = window.getSelection();
     let node = sel && sel.anchorNode;
     if (node && node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-    const a = node ? node.closest('a') : null;
+    let a = node ? node.closest('a') : null;
+    if (!a && node && typeof sel.anchorOffset === 'number') {
+      const before = node.childNodes[sel.anchorOffset - 1];
+      const after = node.childNodes[sel.anchorOffset];
+      const fromElement = (n) => n && n.nodeType === Node.ELEMENT_NODE ? n.closest('a') : null;
+      a = fromElement(before) || fromElement(after);
+    }
     dioxus.send(a ? [a.textContent, a.getAttribute('href') || ''] : null);
     "#,
   );
@@ -257,14 +276,24 @@ async fn insert_link_html(html: String) {
     const sel = window.getSelection();
     let node = sel && sel.anchorNode;
     if (node && node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-    const existing = node ? node.closest('a') : null;
+    let existing = node ? node.closest('a') : null;
+    if (!existing && node && typeof sel.anchorOffset === 'number') {
+      const before = node.childNodes[sel.anchorOffset - 1];
+      const after = node.childNodes[sel.anchorOffset];
+      const fromElement = (n) => n && n.nodeType === Node.ELEMENT_NODE ? n.closest('a') : null;
+      existing = fromElement(before) || fromElement(after);
+    }
     if (existing) {
       const range = document.createRange();
       range.selectNode(existing);
       sel.removeAllRanges();
       sel.addRange(range);
+    } else if (window.__noteEditorSavedRange) {
+      sel.removeAllRanges();
+      sel.addRange(window.__noteEditorSavedRange);
     }
     document.execCommand('insertHTML', false, html);
+    window.__noteEditorSavedRange = null;
     "#,
   );
   let _ = eval.send((EDITOR_ID, html));

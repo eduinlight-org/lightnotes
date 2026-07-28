@@ -66,26 +66,28 @@ fn toolbar_button(
 ) -> Element {
   let onclick = Rc::new(RefCell::new(onclick));
   rsx! {
-    Tooltip {
-      TooltipTrigger {
-        as: move |trigger_attrs: Vec<Attribute>| {
-          let icon = icon.clone();
-          let onclick = onclick.clone();
-          rsx! {
-            Button {
-              variant: ButtonVariant::Ghost,
-              size: ButtonSize::IconXs,
-              class: TOOLBAR_BUTTON_CLASS,
-              "aria-label": label,
-              attributes: trigger_attrs,
-              onmousedown: move |event: MouseEvent| event.prevent_default(),
-              onclick: move |_| (onclick.borrow_mut())(),
-              {icon}
+    div { class: "shrink-0",
+      Tooltip {
+        TooltipTrigger {
+          as: move |trigger_attrs: Vec<Attribute>| {
+            let icon = icon.clone();
+            let onclick = onclick.clone();
+            rsx! {
+              Button {
+                variant: ButtonVariant::Ghost,
+                size: ButtonSize::IconXs,
+                class: TOOLBAR_BUTTON_CLASS,
+                "aria-label": label,
+                attributes: trigger_attrs,
+                onmousedown: move |event: MouseEvent| event.prevent_default(),
+                onclick: move |_| (onclick.borrow_mut())(),
+                {icon}
+              }
             }
-          }
-        },
+          },
+        }
+        TooltipContent { side: ContentSide::Bottom, {tooltip} }
       }
-      TooltipContent { side: ContentSide::Bottom, {tooltip} }
     }
   }
 }
@@ -97,22 +99,24 @@ fn table_button(
 ) -> Element {
   let onclick = Rc::new(RefCell::new(onclick));
   rsx! {
-    Tooltip {
-      TooltipTrigger {
-        as: move |trigger_attrs: Vec<Attribute>| {
-          let onclick = onclick.clone();
-          rsx! {
-            button {
-              class: TABLE_BUTTON_CLASS,
-              onmousedown: move |event: MouseEvent| event.prevent_default(),
-              onclick: move |_| (onclick.borrow_mut())(),
-              ..trigger_attrs,
-              {label}
+    div { class: "shrink-0",
+      Tooltip {
+        TooltipTrigger {
+          as: move |trigger_attrs: Vec<Attribute>| {
+            let onclick = onclick.clone();
+            rsx! {
+              button {
+                class: TABLE_BUTTON_CLASS,
+                onmousedown: move |event: MouseEvent| event.prevent_default(),
+                onclick: move |_| (onclick.borrow_mut())(),
+                ..trigger_attrs,
+                {label}
+              }
             }
-          }
-        },
+          },
+        }
+        TooltipContent { side: ContentSide::Bottom, {tooltip} }
       }
-      TooltipContent { side: ContentSide::Bottom, {tooltip} }
     }
   }
 }
@@ -369,39 +373,39 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   }
               }
           }
-          div { class: "mt-3 flex flex-wrap items-center gap-1",
+          div { class: "mt-3 flex flex-nowrap items-center gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible",
               {toolbar_button("Bold", "Bold", rsx! { Bold { size: "14px" } }, move || editor.markdown_editor.toggle_bold())}
               {toolbar_button("Italic", "Italic", rsx! { Italic { size: "14px" } }, move || editor.markdown_editor.toggle_italic())}
               {toolbar_button("Code", "Inline code", rsx! { Code { size: "14px" } }, move || editor.markdown_editor.toggle_code())}
               {toolbar_button("Link", "Add link…", rsx! { LinkIcon { size: "14px" } }, move || editor.open_link_dialog())}
               {toolbar_button("Remove link", "Remove link", rsx! { Unlink { size: "14px" } }, move || editor.markdown_editor.remove_link())}
-              span { class: "mx-1 h-4 w-px bg-[var(--primary-color-6)]" }
+              span { class: "mx-1 h-4 w-px shrink-0 bg-[var(--primary-color-6)]" }
               {toolbar_button("Paragraph", "Convert to plain paragraph", rsx! { Pilcrow { size: "14px" } }, move || editor.markdown_editor.set_paragraph())}
               {toolbar_button("Heading 1", "Heading 1", rsx! { Heading1 { size: "14px" } }, move || editor.markdown_editor.set_heading(1))}
               {toolbar_button("Heading 2", "Heading 2", rsx! { Heading2 { size: "14px" } }, move || editor.markdown_editor.set_heading(2))}
               {toolbar_button("Heading 3", "Heading 3", rsx! { Heading3 { size: "14px" } }, move || editor.markdown_editor.set_heading(3))}
               {toolbar_button("Quote", "Toggle blockquote", rsx! { Quote { size: "14px" } }, move || editor.markdown_editor.toggle_blockquote())}
               {toolbar_button("Code block", "Code block", rsx! { Code { size: "14px" } }, move || editor.markdown_editor.set_code_block())}
-              span { class: "mx-1 h-4 w-px bg-[var(--primary-color-6)]" }
+              span { class: "mx-1 h-4 w-px shrink-0 bg-[var(--primary-color-6)]" }
               {toolbar_button("Bulleted list", "Bulleted list", rsx! { List { size: "14px" } }, move || editor.markdown_editor.toggle_bullet_list())}
               {toolbar_button("Numbered list", "Numbered list", rsx! { ListOrdered { size: "14px" } }, move || editor.markdown_editor.toggle_ordered_list())}
               {toolbar_button("Lift out of list", "Lift out of list", rsx! { ListIndentDecrease { size: "14px" } }, move || editor.markdown_editor.lift_list_item())}
-              span { class: "mx-1 h-4 w-px bg-[var(--primary-color-6)]" }
+              span { class: "mx-1 h-4 w-px shrink-0 bg-[var(--primary-color-6)]" }
               {toolbar_button("Align left", "Align left", rsx! { TextAlignStart { size: "14px" } }, move || editor.markdown_editor.align_left())}
               {toolbar_button("Align center", "Align center", rsx! { TextAlignCenter { size: "14px" } }, move || editor.markdown_editor.align_center())}
               {toolbar_button("Align right", "Align right", rsx! { TextAlignEnd { size: "14px" } }, move || editor.markdown_editor.align_right())}
               {toolbar_button("Justify", "Justify text", rsx! { TextAlignJustify { size: "14px" } }, move || editor.markdown_editor.align_justify())}
-              span { class: "mx-1 h-4 w-px bg-[var(--primary-color-6)]" }
+              span { class: "mx-1 h-4 w-px shrink-0 bg-[var(--primary-color-6)]" }
               {toolbar_button("Uppercase", "Convert selection to UPPERCASE", rsx! { CaseUpper { size: "14px" } }, move || editor.markdown_editor.to_uppercase())}
               {toolbar_button("Lowercase", "Convert selection to lowercase", rsx! { CaseLower { size: "14px" } }, move || editor.markdown_editor.to_lowercase())}
               {toolbar_button("Insert image", "Insert image from URL…", rsx! { ImageIcon { size: "14px" } }, move || editor.markdown_editor.insert_image_via_prompt())}
-              span { class: "mx-1 h-4 w-px bg-[var(--primary-color-6)]" }
+              span { class: "mx-1 h-4 w-px shrink-0 bg-[var(--primary-color-6)]" }
               {toolbar_button("Undo", "Undo", rsx! { Undo { size: "14px" } }, move || editor.markdown_editor.undo())}
               {toolbar_button("Redo", "Redo", rsx! { Redo { size: "14px" } }, move || editor.markdown_editor.redo())}
               {toolbar_button("Select all", "Select all", rsx! { SquareDashedMousePointer { size: "14px" } }, move || editor.markdown_editor.select_all())}
           }
-          div { class: "mt-1.5 flex flex-wrap items-center gap-1.5",
-              span { class: "text-[10px] font-medium uppercase tracking-wider text-[var(--secondary-color-5)]", "Table" }
+          div { class: "mt-1.5 flex flex-nowrap items-center gap-1.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible",
+              span { class: "shrink-0 text-[10px] font-medium uppercase tracking-wider text-[var(--secondary-color-5)]", "Table" }
               {toolbar_button("Insert 3x3 table", "Insert a 3x3 table at the cursor", rsx! { TableIcon { size: "14px" } }, move || editor.markdown_editor.insert_table(3, 3))}
               {table_button("+ Row", "Insert a row after the current one", move || editor.markdown_editor.add_row())}
               {table_button("+ Col", "Insert a column after the current one", move || editor.markdown_editor.add_column())}
