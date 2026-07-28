@@ -1,0 +1,15 @@
+[package]
+name = "store-sdk"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sync-dto = { workspace = true }
+api-sdk = { workspace = true }
+dioxus = { workspace = true }
+sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio"] }
+dirs = "6.0.0"
+uuid = { version = "1.24.0", features = ["v4"] }
+serde_json = "1.0.151"
+tokio = { version = "1.53.1", features = ["sync", "time", "rt"] }
+futures-util = "0.3.33"

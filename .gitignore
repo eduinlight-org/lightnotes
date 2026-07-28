@@ -11,3 +11,6 @@ apps/*/assets/tailwind.css
 
 # Local environment overrides
 .env
+
+# API log files (production)
+/logs

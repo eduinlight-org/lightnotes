@@ -1,5 +1,5 @@
 use super::use_note_list_item::use_note_list_item;
-use crate::state::Note;
+use crate::state::{format_relative_time, Note};
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{Pin, Star};
 
@@ -99,7 +99,7 @@ pub fn NoteListItem(props: NoteListItemProps) -> Element {
               if snippet_text.is_empty() { "No additional text" } else { "{snippet_text}" }
           }
           div { class: footer_class,
-              span { "{note.updated_at}" }
+              span { "{format_relative_time(note.updated_at_ms)}" }
               for tag in tags {
                   span { key: "{tag}", class: "rounded-[5px] border border-[var(--primary-color-6)] px-[6px] py-px", "#{tag}" }
               }

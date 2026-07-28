@@ -1,0 +1,27 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: lightnotes
+      MONGO_INITDB_ROOT_PASSWORD: lightnotes
+    volumes:
+      - mongo_data:/data/db
+
+  mongo-express:
+    image: mongo-express:latest
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    ports:
+      - "8082:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_ADMINUSERNAME: lightnotes
+      ME_CONFIG_MONGODB_ADMINPASSWORD: lightnotes
+      ME_CONFIG_BASICAUTH: "false"
+
+volumes:
+  mongo_data:

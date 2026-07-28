@@ -12,8 +12,41 @@ pub struct Note {
   pub tag_ids: Vec<String>,
   pub pinned: bool,
   pub starred: bool,
-  pub updated_at: String,
+  pub updated_at_ms: i64,
   pub order: i64,
+}
+
+pub fn now_ms() -> i64 {
+  web_time::SystemTime::now()
+    .duration_since(web_time::UNIX_EPOCH)
+    .map(|duration| duration.as_millis() as i64)
+    .unwrap_or(0)
+}
+
+pub fn format_relative_time(updated_at_ms: i64) -> String {
+  let elapsed_ms = (now_ms() - updated_at_ms).max(0);
+  let elapsed_minutes = elapsed_ms / 60_000;
+  let elapsed_hours = elapsed_ms / 3_600_000;
+  let elapsed_days = elapsed_ms / 86_400_000;
+
+  if elapsed_minutes < 1 {
+    "Just now".to_string()
+  } else if elapsed_minutes < 60 {
+    format!("{elapsed_minutes}m ago")
+  } else if elapsed_hours < 24 {
+    format!("{elapsed_hours}h ago")
+  } else if elapsed_days == 1 {
+    "Yesterday".to_string()
+  } else if elapsed_days < 7 {
+    format!("{elapsed_days} days ago")
+  } else {
+    let elapsed_weeks = elapsed_days / 7;
+    if elapsed_weeks <= 1 {
+      "1 week ago".to_string()
+    } else {
+      format!("{elapsed_weeks} weeks ago")
+    }
+  }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -45,12 +78,20 @@ pub struct Folder {
   pub id: String,
   pub name: String,
   pub icon: FolderIcon,
+  #[serde(default = "now_ms")]
+  pub updated_at_ms: i64,
+  #[serde(default)]
+  pub order: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tag {
   pub id: String,
   pub name: String,
+  #[serde(default = "now_ms")]
+  pub updated_at_ms: i64,
+  #[serde(default)]
+  pub order: i64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
@@ -102,7 +143,7 @@ fn default_accent() -> String {
   ACCENT_SWATCHES[0].to_string()
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct NotesStore {
   notes: Signal<Vec<Note>>,
   folders: Signal<Vec<Folder>>,
@@ -117,16 +158,20 @@ pub struct NotesStore {
 
 impl NotesStore {
   pub fn seed() -> Self {
+    let now = now_ms();
+    const HOUR_MS: i64 = 3_600_000;
+    const DAY_MS: i64 = 86_400_000;
+
     let folders = vec![
-      Folder { id: "folder-1".into(), name: "Personal".into(), icon: FolderIcon::User },
-      Folder { id: "folder-2".into(), name: "Work".into(), icon: FolderIcon::Briefcase },
-      Folder { id: "folder-3".into(), name: "Ideas".into(), icon: FolderIcon::Inbox },
+      Folder { id: "folder-1".into(), name: "Personal".into(), icon: FolderIcon::User, updated_at_ms: now, order: 1 },
+      Folder { id: "folder-2".into(), name: "Work".into(), icon: FolderIcon::Briefcase, updated_at_ms: now, order: 2 },
+      Folder { id: "folder-3".into(), name: "Ideas".into(), icon: FolderIcon::Inbox, updated_at_ms: now, order: 3 },
     ];
 
     let tags = vec![
-      Tag { id: "tag-1".into(), name: "todo".into() },
-      Tag { id: "tag-2".into(), name: "recipe".into() },
-      Tag { id: "tag-3".into(), name: "journal".into() },
+      Tag { id: "tag-1".into(), name: "todo".into(), updated_at_ms: now, order: 1 },
+      Tag { id: "tag-2".into(), name: "recipe".into(), updated_at_ms: now, order: 2 },
+      Tag { id: "tag-3".into(), name: "journal".into(), updated_at_ms: now, order: 3 },
     ];
 
     let notes = vec![
@@ -138,7 +183,7 @@ impl NotesStore {
         tag_ids: vec!["tag-3".into()],
         pinned: true,
         starred: true,
-        updated_at: "2h ago".into(),
+        updated_at_ms: now - 2 * HOUR_MS,
         order: 100,
       },
       Note {
@@ -149,7 +194,7 @@ impl NotesStore {
         tag_ids: vec!["tag-1".into()],
         pinned: false,
         starred: false,
-        updated_at: "Yesterday".into(),
+        updated_at_ms: now - DAY_MS,
         order: 90,
       },
       Note {
@@ -160,7 +205,7 @@ impl NotesStore {
         tag_ids: vec!["tag-2".into()],
         pinned: false,
         starred: false,
-        updated_at: "2 days ago".into(),
+        updated_at_ms: now - 2 * DAY_MS,
         order: 80,
       },
       Note {
@@ -171,7 +216,7 @@ impl NotesStore {
         tag_ids: vec!["tag-1".into()],
         pinned: true,
         starred: false,
-        updated_at: "3 days ago".into(),
+        updated_at_ms: now - 3 * DAY_MS,
         order: 70,
       },
       Note {
@@ -182,7 +227,7 @@ impl NotesStore {
         tag_ids: vec!["tag-3".into()],
         pinned: false,
         starred: false,
-        updated_at: "1 week ago".into(),
+        updated_at_ms: now - 7 * DAY_MS,
         order: 60,
       },
     ];
@@ -207,11 +252,15 @@ impl NotesStore {
   }
 
   pub fn folders(&self) -> Vec<Folder> {
-    (self.folders)()
+    let mut folders = (self.folders)();
+    folders.sort_by_key(|folder| folder.order);
+    folders
   }
 
   pub fn tags(&self) -> Vec<Tag> {
-    (self.tags)()
+    let mut tags = (self.tags)();
+    tags.sort_by_key(|tag| tag.order);
+    tags
   }
 
   pub fn tag_name(&self, id: &str) -> Option<String> {
@@ -358,7 +407,7 @@ impl NotesStore {
         tag_ids,
         pinned: false,
         starred: false,
-        updated_at: "Just now".into(),
+        updated_at_ms: now_ms(),
         order,
       },
     );
@@ -369,7 +418,7 @@ impl NotesStore {
   fn touch_note(&mut self, id: &str) {
     let order = self.next_id() as i64;
     if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
-      note.updated_at = "Just now".into();
+      note.updated_at_ms = now_ms();
       note.order = order;
     }
   }
@@ -437,20 +486,23 @@ impl NotesStore {
   }
 
   pub fn create_folder_with_icon(&mut self, name: String, icon: FolderIcon) -> String {
-    let id = format!("folder-{}", self.next_id());
-    self.folders.write().push(Folder { id: id.clone(), name, icon });
+    let order = self.next_id() as i64;
+    let id = format!("folder-{order}");
+    self.folders.write().push(Folder { id: id.clone(), name, icon, updated_at_ms: now_ms(), order });
     id
   }
 
   pub fn rename_folder(&mut self, folder_id: &str, name: String) {
     if let Some(folder) = self.folders.write().iter_mut().find(|folder| folder.id == folder_id) {
       folder.name = name;
+      folder.updated_at_ms = now_ms();
     }
   }
 
   pub fn set_folder_icon(&mut self, folder_id: &str, icon: FolderIcon) {
     if let Some(folder) = self.folders.write().iter_mut().find(|folder| folder.id == folder_id) {
       folder.icon = icon;
+      folder.updated_at_ms = now_ms();
     }
   }
 
@@ -471,8 +523,9 @@ impl NotesStore {
     if let Some(existing) = (self.tags)().into_iter().find(|tag| tag.name == normalized) {
       return existing.id;
     }
-    let id = format!("tag-{}", self.next_id());
-    self.tags.write().push(Tag { id: id.clone(), name: normalized });
+    let order = self.next_id() as i64;
+    let id = format!("tag-{order}");
+    self.tags.write().push(Tag { id: id.clone(), name: normalized, updated_at_ms: now_ms(), order });
     id
   }
 

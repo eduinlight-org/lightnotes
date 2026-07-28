@@ -4,6 +4,9 @@ members = [
     "packages/ui",
     "packages/app",
     "packages/editor",
+    "packages/sync-dto",
+    "packages/api-sdk",
+    "packages/store-sdk",
     "apps/web",
     "apps/desktop",
     "apps/mobile",
@@ -18,4 +21,6 @@ dioxus = { version = "0.7.1" }
 ui = { path = "packages/ui" }
 app = { path = "packages/app" }
 editor = { path = "packages/editor" }
-api = { path = "apps/api" }
+sync-dto = { path = "packages/sync-dto" }
+api-sdk = { path = "packages/api-sdk" }
+store-sdk = { path = "packages/store-sdk" }

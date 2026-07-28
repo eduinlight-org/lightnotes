@@ -1,22 +1,31 @@
+use super::link_dialog::LinkDialog;
 use super::use_note_editor::use_note_editor;
-use crate::components::{ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
-use crate::state::{FolderIcon, Note};
+use crate::components::{
+  ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger,
+};
+use crate::state::{format_relative_time, FolderIcon, Note};
 use crate::Route;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{
-  Archive, ArrowLeft, Bold, Bookmark, BookOpen, Briefcase, Calendar, Camera, ChevronDown, Code, FileText, Gift, Globe,
-  Heading1, Heart, House, Inbox, Italic, Link as LinkIcon, List, Lock, Music, Notebook, Palette, Pin, Quote, Rocket,
-  Settings, Star, Trash2, User, X,
+  Archive, ArrowLeft, Bold, BookOpen, Bookmark, Briefcase, Calendar, Camera, CaseLower, CaseUpper,
+  ChevronDown, Code, FileText, Gift, Globe, Heading1, Heading2, Heading3, Heart, House,
+  Image as ImageIcon, Inbox, Italic, Link as LinkIcon, List, ListIndentDecrease, ListOrdered, Lock,
+  Merge, Music, Notebook, Palette, Pilcrow, Pin, Quote, Redo, Rocket, Settings,
+  SquareDashedMousePointer, Star, Table as TableIcon, TableCellsMerge, TableCellsSplit,
+  TextAlignCenter, TextAlignEnd, TextAlignJustify, TextAlignStart, Trash2, Undo, Unlink, User, X,
 };
 use editor::MarkdownEditorView;
+use std::cell::RefCell;
+use std::rc::Rc;
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 use ui::components::input::Input;
-use ui::components::popover::ContentAlign;
+use ui::components::popover::{ContentAlign, ContentSide};
 use ui::components::sidebar::use_is_mobile;
+use ui::components::tooltip::{Tooltip, TooltipContent, TooltipTrigger};
 
-const TOOLBAR_BUTTON_CLASS: &str = "text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] hover:text-[var(--accent)]";
+const TOOLBAR_BUTTON_CLASS: &str = "flex flex-justify items-center text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] hover:text-[var(--accent)]";
 
-const EDITOR_CONTENT_CLASS: &str ="text-[var(--secondary-color)] [&_h1]:mb-3 [&_h1]:mt-4 [&_h1]:text-2xl [&_h1]:font-medium [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-medium [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-lg [&_h3]:font-medium [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic [&_code]:rounded [&_code]:bg-[var(--primary-color-5)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px] [&_pre]:mb-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[var(--primary-color-5)] [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_a]:text-[var(--accent)] [&_a]:underline [&_blockquote]:mb-3 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--accent)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-[var(--secondary-color-5)] [&_.taino-editor]:h-full [&_.taino-editor]:min-h-full [&_.taino-editor]:outline-none";
+const EDITOR_CONTENT_CLASS: &str ="text-[var(--secondary-color)] [&_h1]:mb-3 [&_h1]:mt-4 [&_h1]:text-2xl [&_h1]:font-medium [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-medium [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-lg [&_h3]:font-medium [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic [&_code]:rounded [&_code]:bg-[var(--primary-color-5)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px] [&_pre]:mb-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[var(--primary-color-5)] [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_a]:text-[var(--accent)] [&_a]:underline [&_blockquote]:mb-3 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--accent)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-[var(--secondary-color-5)] [&_table]:mb-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-[var(--primary-color-6)] [&_th]:p-2 [&_th]:text-left [&_th]:font-medium [&_td]:border [&_td]:border-[var(--primary-color-6)] [&_td]:p-2 [&_img]:max-w-full [&_img]:rounded-lg [&_.taino-cell-selected]:bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] [&_.taino-editor]:h-full [&_.taino-editor]:min-h-full [&_.taino-editor]:outline-none";
 
 fn folder_icon(icon: FolderIcon) -> Element {
   match icon {
@@ -45,6 +54,67 @@ fn folder_icon(icon: FolderIcon) -> Element {
 
 fn word_count(content: &str) -> usize {
   content.split_whitespace().count()
+}
+
+const TABLE_BUTTON_CLASS: &str = "rounded-md border border-[var(--primary-color-6)] px-2 py-1 text-xs text-[var(--secondary-color)] hover:bg-[color-mix(in_srgb,var(--secondary-color)_6%,transparent)]";
+
+fn toolbar_button(
+  label: &'static str,
+  tooltip: &'static str,
+  icon: Element,
+  onclick: impl FnMut() + 'static,
+) -> Element {
+  let onclick = Rc::new(RefCell::new(onclick));
+  rsx! {
+    Tooltip {
+      TooltipTrigger {
+        as: move |trigger_attrs: Vec<Attribute>| {
+          let icon = icon.clone();
+          let onclick = onclick.clone();
+          rsx! {
+            Button {
+              variant: ButtonVariant::Ghost,
+              size: ButtonSize::IconXs,
+              class: TOOLBAR_BUTTON_CLASS,
+              "aria-label": label,
+              attributes: trigger_attrs,
+              onmousedown: move |event: MouseEvent| event.prevent_default(),
+              onclick: move |_| (onclick.borrow_mut())(),
+              {icon}
+            }
+          }
+        },
+      }
+      TooltipContent { side: ContentSide::Bottom, {tooltip} }
+    }
+  }
+}
+
+fn table_button(
+  label: &'static str,
+  tooltip: &'static str,
+  onclick: impl FnMut() + 'static,
+) -> Element {
+  let onclick = Rc::new(RefCell::new(onclick));
+  rsx! {
+    Tooltip {
+      TooltipTrigger {
+        as: move |trigger_attrs: Vec<Attribute>| {
+          let onclick = onclick.clone();
+          rsx! {
+            button {
+              class: TABLE_BUTTON_CLASS,
+              onmousedown: move |event: MouseEvent| event.prevent_default(),
+              onclick: move |_| (onclick.borrow_mut())(),
+              ..trigger_attrs,
+              {label}
+            }
+          }
+        },
+      }
+      TooltipContent { side: ContentSide::Bottom, {tooltip} }
+    }
+  }
 }
 
 #[derive(PartialEq, Clone, Props)]
@@ -216,7 +286,7 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   }
               }
               span { "\u{b7}" }
-              span { "Edited {note.updated_at}" }
+              span { "Edited {format_relative_time(note.updated_at_ms)}" }
               span { "\u{b7}" }
               span { "{words} words" }
               span { class: "mx-1 h-3 w-px bg-[var(--primary-color-6)]" }
@@ -300,74 +370,48 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
               }
           }
           div { class: "mt-3 flex flex-wrap items-center gap-1",
-              Button {
-                  variant: ButtonVariant::Ghost,
-                  size: ButtonSize::IconXs,
-                  class: TOOLBAR_BUTTON_CLASS,
-                  "aria-label": "Bold",
-                  onmousedown: move |event: MouseEvent| event.prevent_default(),
-                  onclick: move |_| editor.markdown_editor.toggle_bold(),
-                  Bold { size: "14px" }
-              }
-              Button {
-                  variant: ButtonVariant::Ghost,
-                  size: ButtonSize::IconXs,
-                  class: TOOLBAR_BUTTON_CLASS,
-                  "aria-label": "Italic",
-                  onmousedown: move |event: MouseEvent| event.prevent_default(),
-                  onclick: move |_| editor.markdown_editor.toggle_italic(),
-                  Italic { size: "14px" }
-              }
-              Button {
-                  variant: ButtonVariant::Ghost,
-                  size: ButtonSize::IconXs,
-                  class: TOOLBAR_BUTTON_CLASS,
-                  "aria-label": "Heading",
-                  onmousedown: move |event: MouseEvent| event.prevent_default(),
-                  onclick: move |_| editor.markdown_editor.set_heading(2),
-                  Heading1 { size: "14px" }
-              }
+              {toolbar_button("Bold", "Bold", rsx! { Bold { size: "14px" } }, move || editor.markdown_editor.toggle_bold())}
+              {toolbar_button("Italic", "Italic", rsx! { Italic { size: "14px" } }, move || editor.markdown_editor.toggle_italic())}
+              {toolbar_button("Code", "Inline code", rsx! { Code { size: "14px" } }, move || editor.markdown_editor.toggle_code())}
+              {toolbar_button("Link", "Add link…", rsx! { LinkIcon { size: "14px" } }, move || editor.open_link_dialog())}
+              {toolbar_button("Remove link", "Remove link", rsx! { Unlink { size: "14px" } }, move || editor.markdown_editor.remove_link())}
               span { class: "mx-1 h-4 w-px bg-[var(--primary-color-6)]" }
-              Button {
-                  variant: ButtonVariant::Ghost,
-                  size: ButtonSize::IconXs,
-                  class: TOOLBAR_BUTTON_CLASS,
-                  "aria-label": "Bulleted list",
-                  onmousedown: move |event: MouseEvent| event.prevent_default(),
-                  onclick: move |_| editor.markdown_editor.toggle_bullet_list(),
-                  List { size: "14px" }
-              }
-              Button {
-                  variant: ButtonVariant::Ghost,
-                  size: ButtonSize::IconXs,
-                  class: TOOLBAR_BUTTON_CLASS,
-                  "aria-label": "Quote",
-                  onmousedown: move |event: MouseEvent| event.prevent_default(),
-                  onclick: move |_| editor.markdown_editor.toggle_blockquote(),
-                  Quote { size: "14px" }
-              }
-              Button {
-                  variant: ButtonVariant::Ghost,
-                  size: ButtonSize::IconXs,
-                  class: TOOLBAR_BUTTON_CLASS,
-                  "aria-label": "Code",
-                  onmousedown: move |event: MouseEvent| event.prevent_default(),
-                  onclick: move |_| editor.markdown_editor.toggle_code(),
-                  Code { size: "14px" }
-              }
-              Button {
-                  variant: ButtonVariant::Ghost,
-                  size: ButtonSize::IconXs,
-                  class: TOOLBAR_BUTTON_CLASS,
-                  "aria-label": "Link",
-                  onmousedown: move |event: MouseEvent| event.prevent_default(),
-                  onclick: move |_| {
-                      if let Some(href) = editor::prompt("URL:") {
-                          editor.markdown_editor.set_link(href);
-                      }
-                  },
-                  LinkIcon { size: "14px" }
-              }
+              {toolbar_button("Paragraph", "Convert to plain paragraph", rsx! { Pilcrow { size: "14px" } }, move || editor.markdown_editor.set_paragraph())}
+              {toolbar_button("Heading 1", "Heading 1", rsx! { Heading1 { size: "14px" } }, move || editor.markdown_editor.set_heading(1))}
+              {toolbar_button("Heading 2", "Heading 2", rsx! { Heading2 { size: "14px" } }, move || editor.markdown_editor.set_heading(2))}
+              {toolbar_button("Heading 3", "Heading 3", rsx! { Heading3 { size: "14px" } }, move || editor.markdown_editor.set_heading(3))}
+              {toolbar_button("Quote", "Toggle blockquote", rsx! { Quote { size: "14px" } }, move || editor.markdown_editor.toggle_blockquote())}
+              {toolbar_button("Code block", "Code block", rsx! { Code { size: "14px" } }, move || editor.markdown_editor.set_code_block())}
+              span { class: "mx-1 h-4 w-px bg-[var(--primary-color-6)]" }
+              {toolbar_button("Bulleted list", "Bulleted list", rsx! { List { size: "14px" } }, move || editor.markdown_editor.toggle_bullet_list())}
+              {toolbar_button("Numbered list", "Numbered list", rsx! { ListOrdered { size: "14px" } }, move || editor.markdown_editor.toggle_ordered_list())}
+              {toolbar_button("Lift out of list", "Lift out of list", rsx! { ListIndentDecrease { size: "14px" } }, move || editor.markdown_editor.lift_list_item())}
+              span { class: "mx-1 h-4 w-px bg-[var(--primary-color-6)]" }
+              {toolbar_button("Align left", "Align left", rsx! { TextAlignStart { size: "14px" } }, move || editor.markdown_editor.align_left())}
+              {toolbar_button("Align center", "Align center", rsx! { TextAlignCenter { size: "14px" } }, move || editor.markdown_editor.align_center())}
+              {toolbar_button("Align right", "Align right", rsx! { TextAlignEnd { size: "14px" } }, move || editor.markdown_editor.align_right())}
+              {toolbar_button("Justify", "Justify text", rsx! { TextAlignJustify { size: "14px" } }, move || editor.markdown_editor.align_justify())}
+              span { class: "mx-1 h-4 w-px bg-[var(--primary-color-6)]" }
+              {toolbar_button("Uppercase", "Convert selection to UPPERCASE", rsx! { CaseUpper { size: "14px" } }, move || editor.markdown_editor.to_uppercase())}
+              {toolbar_button("Lowercase", "Convert selection to lowercase", rsx! { CaseLower { size: "14px" } }, move || editor.markdown_editor.to_lowercase())}
+              {toolbar_button("Insert image", "Insert image from URL…", rsx! { ImageIcon { size: "14px" } }, move || editor.markdown_editor.insert_image_via_prompt())}
+              span { class: "mx-1 h-4 w-px bg-[var(--primary-color-6)]" }
+              {toolbar_button("Undo", "Undo", rsx! { Undo { size: "14px" } }, move || editor.markdown_editor.undo())}
+              {toolbar_button("Redo", "Redo", rsx! { Redo { size: "14px" } }, move || editor.markdown_editor.redo())}
+              {toolbar_button("Select all", "Select all", rsx! { SquareDashedMousePointer { size: "14px" } }, move || editor.markdown_editor.select_all())}
+          }
+          div { class: "mt-1.5 flex flex-wrap items-center gap-1.5",
+              span { class: "text-[10px] font-medium uppercase tracking-wider text-[var(--secondary-color-5)]", "Table" }
+              {toolbar_button("Insert 3x3 table", "Insert a 3x3 table at the cursor", rsx! { TableIcon { size: "14px" } }, move || editor.markdown_editor.insert_table(3, 3))}
+              {table_button("+ Row", "Insert a row after the current one", move || editor.markdown_editor.add_row())}
+              {table_button("+ Col", "Insert a column after the current one", move || editor.markdown_editor.add_column())}
+              {table_button("− Row", "Delete the current row", move || editor.markdown_editor.delete_row())}
+              {table_button("− Col", "Delete the current column", move || editor.markdown_editor.delete_column())}
+              {table_button("Header row", "Toggle the first row as a header", move || editor.markdown_editor.toggle_header_row())}
+              {toolbar_button("Merge row", "Merge the selected cells across the current row", rsx! { Merge { size: "14px" } }, move || editor.markdown_editor.merge_row())}
+              {toolbar_button("Merge column", "Merge the selected cells down the current column", rsx! { TableCellsMerge { size: "14px" } }, move || editor.markdown_editor.merge_column())}
+              {toolbar_button("Split cell", "Split a previously merged cell", rsx! { TableCellsSplit { size: "14px" } }, move || editor.markdown_editor.split_cell())}
+              {table_button("Delete table", "Delete the whole table", move || editor.markdown_editor.delete_table())}
           }
           }
           div { class: "min-h-0 flex flex-1 overflow-hidden",
@@ -377,5 +421,6 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
               }
           }
       }
+      LinkDialog { editor }
   }
 }

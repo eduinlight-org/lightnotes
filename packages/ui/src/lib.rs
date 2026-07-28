@@ -6,9 +6,6 @@ use dioxus::prelude::*;
 
 pub mod components;
 
-mod echo;
-pub use echo::Echo;
-
 /// Theme variables consumed by every component in [`components`]. Link this once in each
 /// platform's document head.
 pub const THEME_CSS: Asset = asset!("/assets/dx-components-theme.css");

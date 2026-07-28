@@ -29,3 +29,15 @@ app-ios-build:
 
 app-desktop-build:
 	dx build --package desktop --platform desktop --release
+
+api-dev:
+	cargo run -p api
+
+api-build:
+	cargo build -p api --release
+
+docker-up:
+	docker compose up -d
+
+docker-down:
+	docker compose down
