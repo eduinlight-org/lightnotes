@@ -11,7 +11,6 @@
   
   .dx-dialog-backdrop[data-state="closed"] {
     animation: dx-dialog-backdrop-animate-out 150ms ease-in forwards;
-    pointer-events: none;
   }
   
   @keyframes dx-dialog-backdrop-animate-out {

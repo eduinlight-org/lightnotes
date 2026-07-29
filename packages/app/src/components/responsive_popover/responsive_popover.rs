@@ -1,7 +1,7 @@
 use super::use_responsive_popover::{use_responsive_popover, ResponsivePopoverCtx};
 use dioxus::prelude::*;
 use ui::components::popover::{ContentAlign, PopoverContent, PopoverRoot, PopoverTrigger};
-use ui::components::sheet::{Sheet, SheetContentClose, SheetDescription, SheetHeader, SheetTitle};
+use ui::components::sheet::{Sheet, SheetDescription, SheetHeader, SheetTitle};
 
 #[derive(PartialEq, Clone, Props)]
 pub struct ResponsivePopoverRootProps {
@@ -81,7 +81,6 @@ pub fn ResponsivePopoverContent(props: ResponsivePopoverContentProps) -> Element
         on_open_change: move |value| ctx.set_open.call(value),
         "data-side": "bottom",
         class: "max-h-[80vh] overflow-y-auto",
-        SheetContentClose {}
         SheetHeader { class: "sr-only",
           SheetTitle { "{title}" }
           SheetDescription { "{description.clone().unwrap_or_else(|| title.clone())}" }

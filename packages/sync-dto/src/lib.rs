@@ -49,6 +49,10 @@ pub struct NoteDto {
   pub starred: bool,
   pub updated_at_ms: i64,
   pub order: i64,
+  #[serde(default)]
+  pub date_ms: i64,
+  #[serde(default)]
+  pub remind_before_hours: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

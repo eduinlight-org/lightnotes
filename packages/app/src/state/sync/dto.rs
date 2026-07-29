@@ -71,6 +71,8 @@ pub fn note_to_dto(note: &Note) -> NoteDto {
     starred: note.starred,
     updated_at_ms: note.updated_at_ms,
     order: note.order,
+    date_ms: note.date_ms,
+    remind_before_hours: note.remind_before_hours,
   }
 }
 
@@ -85,6 +87,8 @@ pub fn note_from_dto(dto: NoteDto) -> Note {
     starred: dto.starred,
     updated_at_ms: dto.updated_at_ms,
     order: dto.order,
+    date_ms: dto.date_ms,
+    remind_before_hours: dto.remind_before_hours,
   }
 }
 

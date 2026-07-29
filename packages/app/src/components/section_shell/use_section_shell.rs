@@ -11,7 +11,7 @@ pub enum Section {
 
 fn section_of(route: &Route) -> Section {
   match route {
-    Route::Diary {} => Section::Diary,
+    Route::Diary {} | Route::DiaryEntry { .. } => Section::Diary,
     Route::Settings {} => Section::Settings,
     _ => Section::Notes,
   }

@@ -2,6 +2,8 @@
 
 A local-first notes app built with [Dioxus 0.7](https://dioxuslabs.com/) — one Rust codebase shipping to web, desktop, and mobile, with a rich Markdown editor, folders & tags, and background sync to a self-hosted API.
 
+LightNotes is intended to be self-hosted: you run the `api` backend yourself alongside the client apps. A hosted cloud version is currently in development.
+
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Rust](https://img.shields.io/badge/rust-stable-orange.svg)
 ![Dioxus](https://img.shields.io/badge/dioxus-0.7-6366f1.svg)
@@ -23,6 +25,12 @@ A local-first notes app built with [Dioxus 0.7](https://dioxuslabs.com/) — one
 - Organize notes into icon-tagged folders and freeform hashtags, with dedicated "Manage folders" / "Manage tags" dialogs for renaming and cleanup.
 - Filter by All / Starred / Pinned / a specific folder / a specific tag, with live note counts.
 - Instant, local full-text search across titles and content.
+
+**Diary**
+- A calendar-based view over the same notes — every note can carry its own date, independent of when it was created or last edited.
+- Day / Week / Month calendar with dots marking days that have notes and a bell glyph on days with a reminder set.
+- Filter the diary's entry list by folder or tag, same as the Notes tab.
+- Set an optional reminder ("at the time" up to a week before) on any note; a bell icon marks reminders in both the Diary and Notes lists.
 
 **Rich Markdown editor**
 - WYSIWYG editing that round-trips cleanly to Markdown — no "preview mode" required.

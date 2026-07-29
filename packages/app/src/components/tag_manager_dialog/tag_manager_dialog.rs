@@ -1,4 +1,5 @@
 use super::use_tag_manager_dialog::{use_tag_manager_dialog, use_tag_manager_panel};
+use crate::components::ConfirmDialog;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{Tag as TagIcon, Trash2, X};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
@@ -14,10 +15,15 @@ pub struct TagManagerPanelProps {
 pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
   let TagManagerPanelProps { on_select } = props;
   let mut panel = use_tag_manager_panel(on_select);
-  let mut store = panel.store;
+  let store = panel.store;
   let mut draft = panel.draft;
   let is_mobile = panel.is_mobile;
   let tags = store.tags();
+  let pending_delete_name = (panel.pending_delete)()
+    .as_ref()
+    .and_then(|id| tags.iter().find(|tag| &tag.id == id))
+    .map(|tag| format!("#{}", tag.name))
+    .unwrap_or_else(|| "This tag".to_string());
 
   let input_row_class = if is_mobile() {
     "flex h-11 items-center gap-2 rounded-[11px] border border-[var(--primary-color-6)] bg-[var(--primary-color-2)] px-[13px] focus-within:border-[var(--accent)]"
@@ -95,7 +101,7 @@ pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
                                   "aria-label": "Delete tag",
                                   onclick: move |event: MouseEvent| {
                                       event.stop_propagation();
-                                      store.delete_tag(&tag_id_for_delete);
+                                      panel.request_delete(&tag_id_for_delete);
                                   },
                                   Trash2 { size: if is_mobile() { "17px" } else { "15px" } }
                               }
@@ -103,6 +109,19 @@ pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
                       }
                   }
               }
+          }
+          ConfirmDialog {
+              open: (panel.pending_delete)().is_some(),
+              on_open_change: move |_| panel.cancel_delete(),
+              icon: rsx! { TagIcon { size: "20px", stroke: "var(--primary-error-color)" } },
+              title: "Delete tag?",
+              description: rsx! {
+                  span {
+                      strong { "{pending_delete_name}" }
+                      " — It will be removed from every note. This can't be undone."
+                  }
+              },
+              on_confirm: move |_| panel.confirm_delete(),
           }
       }
   }

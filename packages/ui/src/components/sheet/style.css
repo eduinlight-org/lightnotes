@@ -11,7 +11,6 @@
   
   .dx-sheet-root[data-state="closed"] {
     animation: dx-sheet-root-out 150ms ease-in forwards;
-    pointer-events: none;
   }
   
   .dx-sheet-root[data-state="open"] {

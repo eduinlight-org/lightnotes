@@ -10,6 +10,7 @@ pub struct FolderManagerPanelState {
   pub draft_icon: Signal<FolderIcon>,
   pub is_mobile: Signal<bool>,
   pub on_select: Option<EventHandler<()>>,
+  pub pending_delete: Signal<Option<String>>,
 }
 
 impl FolderManagerPanelState {
@@ -29,6 +30,21 @@ impl FolderManagerPanelState {
       handler.call(());
     }
   }
+
+  pub fn request_delete(&mut self, folder_id: &str) {
+    self.pending_delete.set(Some(folder_id.to_string()));
+  }
+
+  pub fn cancel_delete(&mut self) {
+    self.pending_delete.set(None);
+  }
+
+  pub fn confirm_delete(&mut self) {
+    if let Some(folder_id) = (self.pending_delete)() {
+      self.store.delete_folder(&folder_id);
+    }
+    self.pending_delete.set(None);
+  }
 }
 
 pub fn use_folder_manager_panel(on_select: Option<EventHandler<()>>) -> FolderManagerPanelState {
@@ -38,6 +54,7 @@ pub fn use_folder_manager_panel(on_select: Option<EventHandler<()>>) -> FolderMa
     draft_icon: use_signal(|| FolderIcon::Notebook),
     is_mobile: use_is_mobile(),
     on_select,
+    pending_delete: use_signal(|| None),
   }
 }
 

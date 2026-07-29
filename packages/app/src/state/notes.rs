@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 
 pub const ACCENT_SWATCHES: [&str; 6] = ["#9184d9", "#84a7d9", "#7db8a0", "#d99184", "#c9a24b", "#c58fd0"];
 
+pub const REMIND_CHOICES: [Option<i64>; 10] =
+  [None, Some(0), Some(1), Some(2), Some(3), Some(6), Some(12), Some(24), Some(48), Some(168)];
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Note {
   pub id: String,
@@ -14,6 +17,10 @@ pub struct Note {
   pub starred: bool,
   pub updated_at_ms: i64,
   pub order: i64,
+  #[serde(default = "now_ms")]
+  pub date_ms: i64,
+  #[serde(default)]
+  pub remind_before_hours: Option<i64>,
 }
 
 pub fn now_ms() -> i64 {
@@ -185,6 +192,8 @@ impl NotesStore {
         starred: true,
         updated_at_ms: now - 2 * HOUR_MS,
         order: 100,
+        date_ms: now - 2 * HOUR_MS,
+        remind_before_hours: None,
       },
       Note {
         id: "note-2".into(),
@@ -196,6 +205,8 @@ impl NotesStore {
         starred: false,
         updated_at_ms: now - DAY_MS,
         order: 90,
+        date_ms: now - DAY_MS,
+        remind_before_hours: Some(1),
       },
       Note {
         id: "note-3".into(),
@@ -207,6 +218,8 @@ impl NotesStore {
         starred: false,
         updated_at_ms: now - 2 * DAY_MS,
         order: 80,
+        date_ms: now - 2 * DAY_MS,
+        remind_before_hours: None,
       },
       Note {
         id: "note-4".into(),
@@ -218,6 +231,8 @@ impl NotesStore {
         starred: false,
         updated_at_ms: now - 3 * DAY_MS,
         order: 70,
+        date_ms: now + DAY_MS,
+        remind_before_hours: Some(24),
       },
       Note {
         id: "note-5".into(),
@@ -229,6 +244,8 @@ impl NotesStore {
         starred: false,
         updated_at_ms: now - 7 * DAY_MS,
         order: 60,
+        date_ms: now - 7 * DAY_MS,
+        remind_before_hours: None,
       },
     ];
 
@@ -309,6 +326,10 @@ impl NotesStore {
     (self.notes)().into_iter().find(|note| note.id == id)
   }
 
+  pub fn all_notes(&self) -> Vec<Note> {
+    (self.notes)()
+  }
+
   pub fn note_count(&self) -> usize {
     (self.notes)().len()
   }
@@ -384,18 +405,9 @@ impl NotesStore {
     self.sync.set(next);
   }
 
-  pub fn create_note(&mut self) -> String {
+  fn insert_note(&mut self, folder_id: Option<String>, tag_ids: Vec<String>, date_ms: i64) -> String {
     let order = self.next_id() as i64;
     let id = format!("note-{order}");
-
-    let folder_id = match self.filter() {
-      NoteFilter::Folder(folder_id) => Some(folder_id),
-      _ => None,
-    };
-    let tag_ids = match self.filter() {
-      NoteFilter::Tag(tag_id) => vec![tag_id],
-      _ => Vec::new(),
-    };
 
     self.notes.write().insert(
       0,
@@ -409,10 +421,29 @@ impl NotesStore {
         starred: false,
         updated_at_ms: now_ms(),
         order,
+        date_ms,
+        remind_before_hours: None,
       },
     );
 
     id
+  }
+
+  pub fn create_note(&mut self) -> String {
+    let folder_id = match self.filter() {
+      NoteFilter::Folder(folder_id) => Some(folder_id),
+      _ => None,
+    };
+    let tag_ids = match self.filter() {
+      NoteFilter::Tag(tag_id) => vec![tag_id],
+      _ => Vec::new(),
+    };
+
+    self.insert_note(folder_id, tag_ids, now_ms())
+  }
+
+  pub fn create_diary_note(&mut self, date_ms: i64, folder_id: Option<String>, tag_ids: Vec<String>) -> String {
+    self.insert_note(folder_id, tag_ids, date_ms)
   }
 
   fn touch_note(&mut self, id: &str) {
@@ -452,6 +483,20 @@ impl NotesStore {
   pub fn set_note_folder(&mut self, id: &str, folder_id: Option<String>) {
     if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
       note.folder_id = folder_id;
+    }
+    self.touch_note(id);
+  }
+
+  pub fn set_note_date(&mut self, id: &str, date_ms: i64) {
+    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
+      note.date_ms = date_ms;
+    }
+    self.touch_note(id);
+  }
+
+  pub fn set_note_remind_before(&mut self, id: &str, remind_before_hours: Option<i64>) {
+    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
+      note.remind_before_hours = remind_before_hours;
     }
     self.touch_note(id);
   }

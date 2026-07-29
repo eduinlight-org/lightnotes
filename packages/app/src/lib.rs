@@ -3,12 +3,12 @@
 use dioxus::prelude::*;
 
 mod components;
-use components::{AppShell, NotesShell, SectionShell};
+use components::{AppShell, DiaryShell, NotesShell, SectionShell};
 
 mod state;
 
 mod views;
-pub use views::{Diary, FoldersScreen, NoteEditor, Notes, Settings, TagsScreen};
+pub use views::{Diary, DiaryEntry, FoldersScreen, NoteEditor, Notes, Settings, TagsScreen};
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
@@ -25,8 +25,12 @@ pub enum Route {
           #[route("/folders")]
           FoldersScreen {},
         #[end_layout]
-        #[route("/diary")]
-        Diary {},
+        #[layout(DiaryShell)]
+          #[route("/diary")]
+          Diary {},
+          #[route("/diary/:note_id")]
+          DiaryEntry { note_id: String },
+        #[end_layout]
         #[route("/settings")]
         Settings {},
 }

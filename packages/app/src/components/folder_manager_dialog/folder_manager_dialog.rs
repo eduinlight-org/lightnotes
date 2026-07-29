@@ -1,10 +1,11 @@
 use super::use_folder_manager_dialog::{use_folder_manager_dialog, use_folder_manager_panel};
-use crate::components::{ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
+use crate::components::{ConfirmDialog, ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
 use crate::state::FolderIcon;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{
-  Archive, Bookmark, BookOpen, Briefcase, Calendar, Camera, ChevronDown, Code, Gift, Globe, Heart,
-  House, Inbox, Lock, Music, Notebook, Palette, Rocket, Settings, Star, Trash2, User, X,
+  Archive, Bookmark, BookOpen, Briefcase, Calendar, Camera, ChevronDown, Code, Folder as FolderGlyph,
+  Gift, Globe, Heart, House, Inbox, Lock, Music, Notebook, Palette, Rocket, Settings, Star, Trash2,
+  User, X,
 };
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 use ui::components::dialog::{Dialog, DialogDescription, DialogTitle};
@@ -112,6 +113,11 @@ pub fn FolderManagerPanel(props: FolderManagerPanelProps) -> Element {
   let mut draft_icon = panel.draft_icon;
   let is_mobile = panel.is_mobile;
   let folders = store.folders();
+  let pending_delete_name = (panel.pending_delete)()
+    .as_ref()
+    .and_then(|id| folders.iter().find(|folder| &folder.id == id))
+    .map(|folder| folder.name.clone())
+    .unwrap_or_else(|| "This folder".to_string());
 
   let input_row_class = if is_mobile() {
     "flex h-11 items-center gap-2 rounded-[11px] border border-[var(--primary-color-6)] bg-[var(--primary-color-2)] px-[13px] focus-within:border-[var(--accent)]"
@@ -192,13 +198,26 @@ pub fn FolderManagerPanel(props: FolderManagerPanelProps) -> Element {
                               button {
                                   class: "flex-none text-[var(--secondary-color-5)] hover:text-[#ec6a5e]",
                                   "aria-label": "Delete folder",
-                                  onclick: move |_| store.delete_folder(&folder_id_for_delete),
+                                  onclick: move |_| panel.request_delete(&folder_id_for_delete),
                                   Trash2 { size: if is_mobile() { "17px" } else { "15px" } }
                               }
                           }
                       }
                   }
               }
+          }
+          ConfirmDialog {
+              open: (panel.pending_delete)().is_some(),
+              on_open_change: move |_| panel.cancel_delete(),
+              icon: rsx! { FolderGlyph { size: "20px", stroke: "var(--primary-error-color)" } },
+              title: "Delete folder?",
+              description: rsx! {
+                  span {
+                      strong { "{pending_delete_name}" }
+                      " — Its notes will move to no folder. This can't be undone."
+                  }
+              },
+              on_confirm: move |_| panel.confirm_delete(),
           }
       }
   }

@@ -10,6 +10,9 @@ pub use settings::Settings;
 mod diary;
 pub use diary::Diary;
 
+mod diary_entry;
+pub use diary_entry::DiaryEntry;
+
 mod tags;
 pub use tags::TagsScreen;
 

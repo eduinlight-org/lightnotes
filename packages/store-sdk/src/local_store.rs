@@ -37,7 +37,7 @@ impl LocalStore {
 
   pub async fn load_snapshot(&self) -> LocalSnapshot {
     let note_rows = sqlx::query(
-      "SELECT id, title, content, folder_id, tag_ids, pinned, starred, updated_at_ms, sort_order FROM notes ORDER BY sort_order DESC",
+      "SELECT id, title, content, folder_id, tag_ids, pinned, starred, updated_at_ms, sort_order, date_ms, remind_before_hours FROM notes ORDER BY sort_order DESC",
     )
       .fetch_all(&self.pool)
       .await
@@ -55,6 +55,8 @@ impl LocalStore {
         starred: row.get("starred"),
         updated_at_ms: row.get("updated_at_ms"),
         order: row.get("sort_order"),
+        date_ms: row.get("date_ms"),
+        remind_before_hours: row.get("remind_before_hours"),
       })
       .collect();
 
@@ -164,11 +166,12 @@ impl LocalStore {
     let tag_ids = serde_json::to_string(&note.tag_ids).unwrap_or_else(|_| "[]".to_string());
 
     sqlx::query(
-      "INSERT INTO notes (id, title, content, folder_id, tag_ids, pinned, starred, updated_at_ms, sort_order) \
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) \
+      "INSERT INTO notes (id, title, content, folder_id, tag_ids, pinned, starred, updated_at_ms, sort_order, date_ms, remind_before_hours) \
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
        ON CONFLICT(id) DO UPDATE SET title = excluded.title, content = excluded.content, folder_id = excluded.folder_id, \
        tag_ids = excluded.tag_ids, pinned = excluded.pinned, starred = excluded.starred, \
-       updated_at_ms = excluded.updated_at_ms, sort_order = excluded.sort_order",
+       updated_at_ms = excluded.updated_at_ms, sort_order = excluded.sort_order, \
+       date_ms = excluded.date_ms, remind_before_hours = excluded.remind_before_hours",
     )
     .bind(&note.id)
     .bind(&note.title)
@@ -179,6 +182,8 @@ impl LocalStore {
     .bind(note.starred)
     .bind(note.updated_at_ms)
     .bind(note.order)
+    .bind(note.date_ms)
+    .bind(note.remind_before_hours)
     .execute(&self.pool)
     .await
     .expect("failed to upsert note");

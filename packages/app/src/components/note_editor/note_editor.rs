@@ -1,18 +1,17 @@
 use super::link_dialog::LinkDialog;
 use super::use_note_editor::use_note_editor;
 use crate::components::{
-  ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger,
+  ConfirmDialog, FolderPicker, ResponsivePopoverContent, ResponsivePopoverRoot,
+  ResponsivePopoverTrigger,
 };
-use crate::state::{format_relative_time, FolderIcon, Note};
+use crate::state::{format_relative_time, Note};
 use crate::Route;
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{
-  Archive, ArrowLeft, Bold, BookOpen, Bookmark, Briefcase, Calendar, Camera, CaseLower, CaseUpper,
-  ChevronDown, Code, FileText, Gift, Globe, Heading1, Heading2, Heading3, Heart, House,
-  Inbox, Italic, Link as LinkIcon, List, ListIndentDecrease, ListOrdered, Lock,
-  Merge, Music, Notebook, Palette, Pilcrow, Pin, Quote, Redo, Rocket, Settings,
+  ArrowLeft, Bold, CaseLower, CaseUpper, Code, FileText, Heading1, Heading2, Heading3, Italic,
+  Link as LinkIcon, List, ListIndentDecrease, ListOrdered, Merge, Pilcrow, Pin, Quote, Redo,
   SquareDashedMousePointer, Star, Table as TableIcon, TableCellsMerge, TableCellsSplit,
-  TextAlignCenter, TextAlignEnd, TextAlignJustify, TextAlignStart, Trash2, Undo, Unlink, User, X,
+  TextAlignCenter, TextAlignEnd, TextAlignJustify, TextAlignStart, Trash2, Undo, Unlink, X,
 };
 use editor::MarkdownEditorView;
 use std::cell::RefCell;
@@ -26,31 +25,6 @@ use ui::components::tooltip::{Tooltip, TooltipContent, TooltipTrigger};
 const TOOLBAR_BUTTON_CLASS: &str = "flex flex-justify items-center text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] hover:text-[var(--accent)]";
 
 const EDITOR_CONTENT_CLASS: &str ="text-[var(--secondary-color)] [&_h1]:mb-3 [&_h1]:mt-4 [&_h1]:text-2xl [&_h1]:font-medium [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-medium [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-lg [&_h3]:font-medium [&_p]:mb-3 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-1 [&_strong]:font-semibold [&_em]:italic [&_code]:rounded [&_code]:bg-[var(--primary-color-5)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[13px] [&_pre]:mb-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-[var(--primary-color-5)] [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_a]:text-[var(--accent)] [&_a]:underline [&_blockquote]:mb-3 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--accent)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-[var(--secondary-color-5)] [&_table]:mb-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-[var(--primary-color-6)] [&_th]:p-2 [&_th]:text-left [&_th]:font-medium [&_td]:border [&_td]:border-[var(--primary-color-6)] [&_td]:p-2 [&_img]:max-w-full [&_img]:rounded-lg [&_.taino-cell-selected]:bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] [&_.taino-editor]:h-full [&_.taino-editor]:min-h-full [&_.taino-editor]:outline-none";
-
-fn folder_icon(icon: FolderIcon) -> Element {
-  match icon {
-    FolderIcon::Inbox => rsx! { Inbox { size: "16px" } },
-    FolderIcon::Briefcase => rsx! { Briefcase { size: "16px" } },
-    FolderIcon::User => rsx! { User { size: "16px" } },
-    FolderIcon::BookOpen => rsx! { BookOpen { size: "16px" } },
-    FolderIcon::Notebook => rsx! { Notebook { size: "16px" } },
-    FolderIcon::Archive => rsx! { Archive { size: "16px" } },
-    FolderIcon::House => rsx! { House { size: "16px" } },
-    FolderIcon::Star => rsx! { Star { size: "16px" } },
-    FolderIcon::Heart => rsx! { Heart { size: "16px" } },
-    FolderIcon::Settings => rsx! { Settings { size: "16px" } },
-    FolderIcon::Calendar => rsx! { Calendar { size: "16px" } },
-    FolderIcon::Camera => rsx! { Camera { size: "16px" } },
-    FolderIcon::Music => rsx! { Music { size: "16px" } },
-    FolderIcon::Code => rsx! { Code { size: "16px" } },
-    FolderIcon::Palette => rsx! { Palette { size: "16px" } },
-    FolderIcon::Gift => rsx! { Gift { size: "16px" } },
-    FolderIcon::Globe => rsx! { Globe { size: "16px" } },
-    FolderIcon::Lock => rsx! { Lock { size: "16px" } },
-    FolderIcon::Rocket => rsx! { Rocket { size: "16px" } },
-    FolderIcon::Bookmark => rsx! { Bookmark { size: "16px" } },
-  }
-}
 
 fn word_count(content: &str) -> usize {
   content.split_whitespace().count()
@@ -124,11 +98,15 @@ fn table_button(
 #[derive(PartialEq, Clone, Props)]
 pub struct NoteEditorPanelProps {
   pub note: Note,
+  #[props(default)]
+  pub extra_header: Option<Element>,
+  #[props(default = Route::Notes {})]
+  pub back_route: Route,
 }
 
 #[component]
 pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
-  let NoteEditorPanelProps { note } = props;
+  let NoteEditorPanelProps { note, extra_header, back_route } = props;
   let mut editor = use_note_editor();
   let mut store = editor.store;
   let is_mobile = use_is_mobile();
@@ -142,18 +120,13 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
     use_effect(move || editor.save_if_changed(&note_id));
   }
 
-  let folder_name = store
-    .folders()
-    .into_iter()
-    .find(|folder| Some(&folder.id) == note.folder_id.as_ref())
-    .map(|folder| folder.name)
-    .unwrap_or_else(|| "\u{2014}".to_string());
   let words = word_count(&note.content);
   let addable_tags: Vec<_> = store
     .tags()
     .into_iter()
     .filter(|tag| !note.tag_ids.contains(&tag.id))
     .collect();
+  let display_title = if note.title.is_empty() { "Untitled note".to_string() } else { note.title.clone() };
 
   rsx! {
       div { class: "flex h-full flex-1 flex-col overflow-hidden",
@@ -164,8 +137,11 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   variant: ButtonVariant::Ghost,
                   size: ButtonSize::IconSm,
                   "aria-label": "Back to notes",
-                  onclick: move |_| {
-                      navigator().push(Route::Notes {});
+                  onclick: {
+                      let back_route = back_route.clone();
+                      move |_| {
+                          navigator().push(back_route.clone());
+                      }
                   },
                   ArrowLeft { size: "16px" }
               }
@@ -206,89 +182,12 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   variant: ButtonVariant::Ghost,
                   size: ButtonSize::IconSm,
                   "aria-label": "Delete note",
-                  onclick: {
-                      let note_id = note_id.clone();
-                      move |_| {
-                          store.delete_note(&note_id);
-                          navigator().push(Route::Notes {});
-                      }
-                  },
+                  onclick: move |_| editor.confirm_delete_open.set(true),
                   Trash2 { size: "16px", stroke: "var(--secondary-color-5)" }
               }
           }
           div { class: "mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--secondary-color-5)]",
-              ResponsivePopoverRoot {
-                  open: (editor.folder_picker_open)(),
-                  on_open_change: move |value| editor.folder_picker_open.set(value),
-                  ResponsivePopoverTrigger {
-                      class: "inline-flex items-center gap-[5px] rounded-md border-none bg-transparent px-[6px] py-[2px] -m-[6px] text-[var(--secondary-color-5)] hover:bg-[color-mix(in_srgb,var(--secondary-color)_8%,transparent)] hover:text-[var(--accent)]",
-                      title: "Move to folder",
-                      FileText { size: "13px" }
-                      "{folder_name}"
-                      ChevronDown { size: "11px" }
-                  }
-                  ResponsivePopoverContent {
-                      title: "Move to folder",
-                      align: ContentAlign::Start,
-                      class: "w-52 items-stretch gap-1 p-1.5 text-left",
-                      if !is_mobile() {
-                          div { class: "px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-[var(--secondary-color-5)]",
-                              "Move to folder"
-                          }
-                      }
-                      div {
-                          class: if is_mobile() {
-                              if note.folder_id.is_none() { "flex cursor-pointer items-center gap-2 rounded-[11px] px-[14px] py-[13px] text-sm bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)]" } else { "flex cursor-pointer items-center gap-2 rounded-[11px] px-[14px] py-[13px] text-sm text-[var(--secondary-color)] bg-[var(--primary-color-2)]" }
-                          } else if note.folder_id.is_none() {
-                              "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)]"
-                          } else {
-                              "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-[var(--secondary-color)] hover:bg-[var(--primary-color-4)]"
-                          },
-                          onclick: {
-                              let note_id = note_id.clone();
-                              move |_| {
-                                  store.set_note_folder(&note_id, None);
-                                  editor.folder_picker_open.set(false);
-                              }
-                          },
-                          FileText { size: "15px" }
-                          "No folder"
-                      }
-                      for folder in store.folders() {
-                          {
-                              let folder_id = folder.id.clone();
-                              let is_active = note.folder_id.as_deref() == Some(folder.id.as_str());
-                              let class = if is_mobile() {
-                                  if is_active {
-                                      "flex cursor-pointer items-center gap-2 rounded-[11px] px-[14px] py-[13px] text-sm bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)]"
-                                  } else {
-                                      "flex cursor-pointer items-center gap-2 rounded-[11px] px-[14px] py-[13px] text-sm text-[var(--secondary-color)] bg-[var(--primary-color-2)]"
-                                  }
-                              } else if is_active {
-                                  "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)]"
-                              } else {
-                                  "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-[var(--secondary-color)] hover:bg-[var(--primary-color-4)]"
-                              };
-                              rsx! {
-                                  div {
-                                      key: "{folder.id}",
-                                      class,
-                                      onclick: {
-                                          let note_id = note_id.clone();
-                                          let folder_id = folder_id.clone();
-                                          move |_| {
-                                              store.set_note_folder(&note_id, Some(folder_id.clone()));
-                                              editor.folder_picker_open.set(false);
-                                          }
-                                      },
-                                      {folder_icon(folder.icon)}
-                                      "{folder.name}"
-                                  }
-                              }
-                          }
-                      }
-                  }
-              }
+              FolderPicker { note: note.clone() }
               span { "\u{b7}" }
               span { "Edited {format_relative_time(note.updated_at_ms)}" }
               span { "\u{b7}" }
@@ -373,6 +272,9 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   }
               }
           }
+          if let Some(extra_header) = extra_header {
+              div { class: "mt-2 flex flex-wrap items-center gap-2", {extra_header} }
+          }
           div { class: "mt-3 flex flex-nowrap items-center gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible",
               {toolbar_button("Bold", "Bold", rsx! { Bold { size: "14px" } }, move || editor.markdown_editor.toggle_bold())}
               {toolbar_button("Italic", "Italic", rsx! { Italic { size: "14px" } }, move || editor.markdown_editor.toggle_italic())}
@@ -425,5 +327,26 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
           }
       }
       LinkDialog { editor }
+      ConfirmDialog {
+          open: (editor.confirm_delete_open)(),
+          on_open_change: move |_| editor.confirm_delete_open.set(false),
+          icon: rsx! { FileText { size: "20px", stroke: "var(--primary-error-color)" } },
+          title: "Delete note?",
+          description: rsx! {
+              span {
+                  strong { "{display_title}" }
+                  " — This note will be removed from every folder and tag. This can't be undone."
+              }
+          },
+          on_confirm: {
+              let note_id = note_id.clone();
+              let back_route = back_route.clone();
+              move |_| {
+                  store.delete_note(&note_id);
+                  editor.confirm_delete_open.set(false);
+                  navigator().push(back_route.clone());
+              }
+          },
+      }
   }
 }

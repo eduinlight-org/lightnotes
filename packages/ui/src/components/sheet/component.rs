@@ -31,22 +31,29 @@ impl SheetSide {
 
 #[component]
 pub fn Sheet(props: DialogRootProps) -> Element {
+    let on_open_change = props.on_open_change;
+    let root_attributes = attributes!(div {
+        class: Styles::dx_sheet_root,
+        "data-slot": "sheet-root",
+        onclick: move |_| on_open_change.call(false),
+    });
+
     let content_base = attributes!(div {
         class: Styles::dx_sheet,
         "data-slot": "sheet-content",
         "data-side": SheetSide::Right.as_str(),
+        onclick: move |event: MouseEvent| event.stop_propagation(),
     });
     let content_attributes = merge_attributes(vec![content_base, props.attributes]);
 
     rsx! {
         dialog::DialogRoot {
-            class: Styles::dx_sheet_root,
-            "data-slot": "sheet-root",
             id: props.id,
             is_modal: props.is_modal,
             open: props.open,
             default_open: props.default_open,
             on_open_change: props.on_open_change,
+            attributes: root_attributes,
             dialog::DialogContent {
                 class: None,
                 attributes: content_attributes,

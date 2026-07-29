@@ -1,7 +1,7 @@
 use super::use_note_list_item::use_note_list_item;
 use crate::state::{format_relative_time, Note};
 use dioxus::prelude::*;
-use dioxus_icons::lucide::{Pin, Star};
+use dioxus_icons::lucide::{BellRing, Pin, Star};
 
 fn snippet(markdown: &str) -> String {
   let plain: String = markdown
@@ -99,6 +99,9 @@ pub fn NoteListItem(props: NoteListItemProps) -> Element {
               if snippet_text.is_empty() { "No additional text" } else { "{snippet_text}" }
           }
           div { class: footer_class,
+              if note.remind_before_hours.is_some() {
+                  BellRing { size: "11px", fill: "var(--accent)", stroke: "var(--accent)" }
+              }
               span { "{format_relative_time(note.updated_at_ms)}" }
               for tag in tags {
                   span { key: "{tag}", class: "rounded-[5px] border border-[var(--primary-color-6)] px-[6px] py-px", "#{tag}" }

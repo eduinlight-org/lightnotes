@@ -9,6 +9,7 @@ pub struct TagManagerPanelState {
   pub draft: Signal<String>,
   pub is_mobile: Signal<bool>,
   pub on_select: Option<EventHandler<()>>,
+  pub pending_delete: Signal<Option<String>>,
 }
 
 impl TagManagerPanelState {
@@ -28,10 +29,31 @@ impl TagManagerPanelState {
       handler.call(());
     }
   }
+
+  pub fn request_delete(&mut self, tag_id: &str) {
+    self.pending_delete.set(Some(tag_id.to_string()));
+  }
+
+  pub fn cancel_delete(&mut self) {
+    self.pending_delete.set(None);
+  }
+
+  pub fn confirm_delete(&mut self) {
+    if let Some(tag_id) = (self.pending_delete)() {
+      self.store.delete_tag(&tag_id);
+    }
+    self.pending_delete.set(None);
+  }
 }
 
 pub fn use_tag_manager_panel(on_select: Option<EventHandler<()>>) -> TagManagerPanelState {
-  TagManagerPanelState { store: use_notes(), draft: use_signal(String::new), is_mobile: use_is_mobile(), on_select }
+  TagManagerPanelState {
+    store: use_notes(),
+    draft: use_signal(String::new),
+    is_mobile: use_is_mobile(),
+    on_select,
+    pending_delete: use_signal(|| None),
+  }
 }
 
 #[derive(Clone, Copy)]
