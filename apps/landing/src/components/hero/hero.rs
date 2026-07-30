@@ -1,4 +1,4 @@
-use crate::theme::PRIMARY_BUTTON_CLASS;
+use crate::theme::{OUTLINED_BUTTON_CLASS, PRIMARY_BUTTON_CLASS};
 use dioxus::prelude::*;
 use ui::components::badge::{Badge, BadgeVariant};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
@@ -16,9 +16,9 @@ pub fn Hero() -> Element {
           div {
               class: "max-w-xl",
               h1 {
-                  class: "text-[clamp(2.75rem,6.2vw,5.25rem)] font-medium leading-[1.06] tracking-tight text-white",
+                  class: "text-[clamp(2rem,5vw,4rem)] font-medium leading-[1.06] tracking-tight text-white",
                   span { class: "block", "Notes that live on" }
-                  span { class: "block", "your machine first." }
+                  span { class: "block", "your machine first" }
               }
               p {
                   class: "mt-8 max-w-[60ch] text-lg leading-relaxed text-white/80",
@@ -34,7 +34,7 @@ pub fn Hero() -> Element {
                   a {
                       href: WEB_APP_URL,
                       class: "no-underline",
-                      Button { variant: ButtonVariant::Outline, size: ButtonSize::Lg, "Try the web app" }
+                      Button { variant: ButtonVariant::Outline, size: ButtonSize::Lg, class: OUTLINED_BUTTON_CLASS, "Try the web app" }
                   }
               }
               div {

@@ -1,9 +1,7 @@
-use crate::theme::PRIMARY_BUTTON_CLASS;
+use crate::theme::{CARD_CLASS, OUTLINED_BUTTON_CLASS, PRIMARY_BUTTON_CLASS};
 use dioxus::prelude::*;
-use dioxus_icons::lucide::{AppWindow, Apple, Smartphone, TabletSmartphone, Terminal};
 use ui::components::badge::{Badge, BadgeVariant};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
-use ui::components::card::{Card, CardContent, CardHeader, CardTitle};
 
 const GITHUB_BUILD_URL: &str = "https://github.com/eduinlight/lightnotes#building-for-release";
 const WEB_APP_URL: &str = "https://lightnotes.eduindev.com";
@@ -25,13 +23,13 @@ const DOWNLOADS: [(Platform, &str, &str, &str); 5] = [
   (Platform::Android, "Android", "Google Play — phones and tablets", "In review"),
 ];
 
-fn platform_icon(platform: Platform) -> Element {
+fn platform_icon_class(platform: Platform) -> &'static str {
   match platform {
-    Platform::MacOs => rsx! { Apple { size: "24px", stroke: "#9a8fe0" } },
-    Platform::Windows => rsx! { AppWindow { size: "24px", stroke: "#9a8fe0" } },
-    Platform::Linux => rsx! { Terminal { size: "24px", stroke: "#9a8fe0" } },
-    Platform::Ios => rsx! { Smartphone { size: "24px", stroke: "#9a8fe0" } },
-    Platform::Android => rsx! { TabletSmartphone { size: "24px", stroke: "#9a8fe0" } },
+    Platform::MacOs => "ph ph-apple-logo",
+    Platform::Windows => "ph ph-windows-logo",
+    Platform::Linux => "ph ph-linux-logo",
+    Platform::Ios => "ph ph-app-store-logo",
+    Platform::Android => "ph ph-google-play-logo",
   }
 }
 
@@ -56,15 +54,14 @@ pub fn DownloadSection() -> Element {
           div {
               class: "mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3",
               for (platform , title , description , status) in DOWNLOADS {
-                  Card {
-                      CardHeader { {platform_icon(platform)} }
-                      CardContent {
-                          div {
-                              class: "flex flex-col items-start gap-2",
-                              CardTitle { "{title}" }
-                              span { class: "text-sm text-white/60", "{description}" }
-                              Badge { variant: BadgeVariant::Secondary, "{status}" }
-                          }
+                  div {
+                      class: "flex flex-col gap-2.5 rounded-xl px-5 py-[18px] shadow-sm {CARD_CLASS}",
+                      i { class: "{platform_icon_class(platform)} text-2xl leading-none text-[#9a8fe0]" }
+                      span { class: "mt-1 text-base font-semibold text-white", "{title}" }
+                      span { class: "text-sm text-white/60", "{description}" }
+                      div {
+                          class: "mt-1.5 self-start",
+                          Badge { variant: BadgeVariant::Secondary, "{status}" }
                       }
                   }
               }
@@ -85,7 +82,7 @@ pub fn DownloadSection() -> Element {
               a {
                   href: GITHUB_BUILD_URL,
                   class: "no-underline",
-                  Button { variant: ButtonVariant::Outline, size: ButtonSize::Sm, "Build from source" }
+                  Button { variant: ButtonVariant::Outline, size: ButtonSize::Sm, class: OUTLINED_BUTTON_CLASS, "Build from source" }
               }
           }
       }

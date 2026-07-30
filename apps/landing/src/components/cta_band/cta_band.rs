@@ -1,4 +1,4 @@
-use crate::theme::PRIMARY_BUTTON_CLASS;
+use crate::theme::{OUTLINED_BUTTON_CLASS, PRIMARY_BUTTON_CLASS};
 use dioxus::prelude::*;
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 
@@ -29,7 +29,7 @@ pub fn CtaBand() -> Element {
               a {
                   href: WEB_APP_URL,
                   class: "no-underline",
-                  Button { variant: ButtonVariant::Ghost, size: ButtonSize::Lg, "lightnotes.eduindev.com" }
+                  Button { variant: ButtonVariant::Ghost, size: ButtonSize::Lg, class: OUTLINED_BUTTON_CLASS, "lightnotes.eduindev.com" }
               }
           }
       }
