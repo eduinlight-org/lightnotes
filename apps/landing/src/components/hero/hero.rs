@@ -1,33 +1,55 @@
-use crate::Route;
+use crate::theme::PRIMARY_BUTTON_CLASS;
 use dioxus::prelude::*;
-use dioxus_icons::lucide::NotebookPen;
+use ui::components::badge::{Badge, BadgeVariant};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
+
+const HERO_SHOT: Asset = asset!("/assets/screenshots/desktop-notes-list.png");
+const GITHUB_URL: &str = "https://github.com/eduinlight/lightnotes";
+const WEB_APP_URL: &str = "https://lightnotes.eduindev.com";
 
 #[component]
 pub fn Hero() -> Element {
   rsx! {
       section {
           id: "hero",
-          class: "flex flex-col items-center gap-6 px-6 py-24 text-center",
+          class: "mx-auto grid max-w-6xl gap-14 px-6 pt-16 pb-4 sm:pt-24 lg:grid-cols-2 lg:items-center",
           div {
-              class: "inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-sm text-[#d4d4d4]",
-              NotebookPen { size: "16px", stroke: "#f59e0b" }
-              "The simplest way to capture your thoughts"
+              class: "max-w-xl",
+              h1 {
+                  class: "text-[clamp(2.75rem,6.2vw,5.25rem)] font-medium leading-[1.06] tracking-tight text-white",
+                  span { class: "block", "Notes that live on" }
+                  span { class: "block", "your machine first." }
+              }
+              p {
+                  class: "mt-8 max-w-[60ch] text-lg leading-relaxed text-white/80",
+                  "LightNotes is a local-first notes app: a rich Markdown editor, folders, tags and a diary calendar, stored on your device and synced through an API you host yourself. One Rust codebase, built with Dioxus, shipping to web, desktop and mobile."
+              }
+              div {
+                  class: "mt-8 flex flex-wrap gap-3",
+                  a {
+                      href: GITHUB_URL,
+                      class: "no-underline",
+                      Button { variant: ButtonVariant::Primary, size: ButtonSize::Lg, class: PRIMARY_BUTTON_CLASS, "Clone the repo" }
+                  }
+                  a {
+                      href: WEB_APP_URL,
+                      class: "no-underline",
+                      Button { variant: ButtonVariant::Outline, size: ButtonSize::Lg, "Try the web app" }
+                  }
+              }
+              div {
+                  class: "mt-6 flex flex-wrap items-center gap-2",
+                  Badge { variant: BadgeVariant::Outline, "MIT licensed" }
+                  Badge { variant: BadgeVariant::Secondary, "Rust · Dioxus 0.7" }
+                  Badge { variant: BadgeVariant::Secondary, "Self-hosted sync" }
+              }
           }
-          h1 {
-              class: "max-w-2xl text-4xl font-bold text-white sm:text-5xl",
-              "All your notes, beautifully organized"
-          }
-          p {
-              class: "max-w-xl text-lg text-[#a1a1a1]",
-              "Write markdown text notes for your ideas, or turn a note into a todo list to track what's done. One fast, distraction-free app for both."
-          }
-          div {
-              class: "flex flex-wrap items-center justify-center gap-4",
-              Button { variant: ButtonVariant::Primary, size: ButtonSize::Lg, "Get started" }
-              Link {
-                  to: Route::Features {},
-                  Button { variant: ButtonVariant::Outline, size: ButtonSize::Lg, "See features" }
+          figure {
+              class: "m-0 rounded-2xl bg-white/5 p-2 shadow-2xl",
+              img {
+                  src: HERO_SHOT,
+                  alt: "LightNotes notes list on desktop",
+                  class: "block w-full rounded-xl",
               }
           }
       }

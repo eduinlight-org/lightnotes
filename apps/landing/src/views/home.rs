@@ -1,11 +1,15 @@
-use crate::components::{CtaBand, FeatureCards, Hero};
+use crate::components::{CtaBand, DownloadSection, FeatureList, Hero, PlatformsSection, SelfHostSection, StatsBand};
 use dioxus::prelude::*;
 
 #[component]
 pub fn Home() -> Element {
   rsx! {
       Hero {}
-      FeatureCards {}
+      StatsBand {}
+      FeatureList {}
+      PlatformsSection {}
+      SelfHostSection {}
+      DownloadSection {}
       CtaBand {}
   }
 }

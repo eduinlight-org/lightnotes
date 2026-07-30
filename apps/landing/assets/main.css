@@ -1,11 +1,25 @@
 :root {
-    --dark: initial;
-    --light: ;
+  --dark: initial;
+  --light: ;
+  --accent: #9a8fe0;
+  --accent-300: #c2b9f0;
 }
 
 body {
-    background-color: #0f1116;
-    color: #ffffff;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
+  background-color: #0f1116;
+  color: #ffffff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+}
+
+a:hover {
+  color: var(--accent-300);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
 }

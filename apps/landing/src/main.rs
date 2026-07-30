@@ -1,17 +1,21 @@
 use dioxus::prelude::*;
 use dioxus_icons::lucide::NotebookPen;
 use ui::components::button::{Button, ButtonVariant};
-use ui::components::navbar::NavbarItem;
 
 mod components;
 use components::{Footer, NavBar};
 
+mod theme;
+use theme::PRIMARY_BUTTON_CLASS;
+
 mod views;
-use views::{Features, Home};
+use views::Home;
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
+
+const GITHUB_URL: &str = "https://github.com/eduinlight/lightnotes";
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
@@ -19,8 +23,6 @@ pub enum Route {
     #[layout(LandingNavbar)]
     #[route("/")]
     Home {},
-    #[route("/features")]
-    Features {},
 }
 
 fn main() {
@@ -49,19 +51,25 @@ fn LandingNavbar() -> Element {
                   Link {
                       to: Route::Home {},
                       class: "flex items-center gap-2 whitespace-nowrap text-white no-underline",
-                      NotebookPen { size: "18px" }
-                      span { class: "hidden sm:inline", "Notes" }
+                      div {
+                          class: "flex h-[26px] w-[26px] items-center justify-center rounded-[7px] bg-[#9a8fe0]/15 text-[#9a8fe0]",
+                          NotebookPen { size: "16px" }
+                      }
+                      "LightNotes"
                   }
               },
               actions: rsx! {
-                  Link {
-                      to: Route::Home {},
+                  a {
+                      href: GITHUB_URL,
                       class: "no-underline",
-                      Button { variant: ButtonVariant::Primary, "Open app" }
+                      Button { variant: ButtonVariant::Primary, class: PRIMARY_BUTTON_CLASS, "Get LightNotes" }
                   }
               },
-              NavbarItem { index: 0usize, value: "home".to_string(), to: Route::Home {}, "Home" }
-              NavbarItem { index: 1usize, value: "features".to_string(), to: Route::Features {}, "Features" }
+              a { href: "#features", class: "text-white/70 no-underline hover:text-white", "Features" }
+              a { href: "#platforms", class: "text-white/70 no-underline hover:text-white", "Platforms" }
+              a { href: "#selfhost", class: "text-white/70 no-underline hover:text-white", "Self-hosting" }
+              a { href: "#download", class: "text-white/70 no-underline hover:text-white", "Download" }
+              a { href: GITHUB_URL, class: "text-white/70 no-underline hover:text-white", "GitHub" }
           }
           main { class: "flex-1", Outlet::<Route> {} }
           Footer {}
