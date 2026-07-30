@@ -13,9 +13,14 @@ LightNotes is intended to be self-hosted: you run the `api` backend yourself alo
 </p>
 
 <p align="center">
-  <img src="docs/images/mobile-notes-list.png" width="24%" alt="LightNotes notes list on mobile">
-  <img src="docs/images/mobile-note-editor.png" width="24%" alt="LightNotes note editor on mobile">
-  <img src="docs/images/mobile-settings.png" width="24%" alt="LightNotes settings on mobile">
+  <img src="docs/images/desktop-diary.png" width="80%" alt="LightNotes diary calendar on desktop">
+</p>
+
+<p align="center">
+  <img src="docs/images/mobile-notes-list.png" width="23%" alt="LightNotes notes list on mobile">
+  <img src="docs/images/mobile-diary.png" width="23%" alt="LightNotes diary calendar on mobile">
+  <img src="docs/images/mobile-note-editor.png" width="23%" alt="LightNotes note editor on mobile">
+  <img src="docs/images/mobile-settings.png" width="23%" alt="LightNotes settings on mobile">
 </p>
 
 ## Features
