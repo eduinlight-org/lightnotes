@@ -146,7 +146,7 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                   ArrowLeft { size: "16px" }
               }
               Input {
-                  class: "h-auto flex-1 border-none bg-transparent px-0 py-1 text-xl font-medium shadow-none [outline:none] hover:bg-transparent focus:bg-transparent focus:shadow-none md:text-[28px]",
+                  class: "h-auto min-w-0 flex-1 border-none bg-transparent px-0 py-1 text-xl font-medium shadow-none [outline:none] hover:bg-transparent focus:bg-transparent focus:shadow-none md:text-[28px]",
                   placeholder: "Untitled note",
                   value: note.title.clone(),
                   oninput: {
@@ -154,7 +154,9 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                       move |event: FormEvent| store.set_note_title(&note_id, event.value())
                   },
               }
-              button {
+              Button {
+                  variant: ButtonVariant::Ghost,
+                  size: ButtonSize::IconSm,
                   "aria-label": if note.starred { "Remove from Starred" } else { "Add to Starred" },
                   onclick: {
                       let note_id = note_id.clone();
@@ -166,7 +168,9 @@ pub fn NoteEditorPanel(props: NoteEditorPanelProps) -> Element {
                       stroke: if note.starred { "#d9b84b" } else { "var(--secondary-color-5)" },
                   }
               }
-              button {
+              Button {
+                  variant: ButtonVariant::Ghost,
+                  size: ButtonSize::IconSm,
                   "aria-label": if note.pinned { "Unpin from top" } else { "Pin to top of list" },
                   onclick: {
                       let note_id = note_id.clone();

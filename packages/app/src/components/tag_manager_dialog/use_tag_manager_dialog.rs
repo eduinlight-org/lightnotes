@@ -38,10 +38,8 @@ impl TagManagerPanelState {
     self.pending_delete.set(None);
   }
 
-  pub fn confirm_delete(&mut self) {
-    if let Some(tag_id) = (self.pending_delete)() {
-      self.store.delete_tag(&tag_id);
-    }
+  pub fn confirm_delete(&mut self, tag_id: &str) {
+    self.store.delete_tag(tag_id);
     self.pending_delete.set(None);
   }
 }

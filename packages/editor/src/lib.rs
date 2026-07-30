@@ -607,6 +607,10 @@ pub struct MarkdownEditorViewProps {
 pub fn MarkdownEditorView(props: MarkdownEditorViewProps) -> Element {
   let MarkdownEditorViewProps { mut handle, class } = props;
   let html = (handle.html)();
+  let class = format!(
+    "[outline:none] [-webkit-tap-highlight-color:transparent] [box-shadow:none] {}",
+    class.unwrap_or_default()
+  );
 
   use_effect(move || {
     spawn(async move {
@@ -628,7 +632,7 @@ pub fn MarkdownEditorView(props: MarkdownEditorViewProps) -> Element {
 
   rsx! {
     div {
-      class: class.unwrap_or_default(),
+      class,
       id: EDITOR_ID,
       contenteditable: "true",
       dangerous_inner_html: "{html}",

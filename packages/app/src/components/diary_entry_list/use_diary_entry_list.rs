@@ -29,7 +29,6 @@ pub struct DiaryEntryListState {
   pub store: NotesStore,
   pub diary_ui: DiaryUiState,
   pub is_mobile: Signal<bool>,
-  pub pending_delete: Signal<Option<String>>,
 }
 
 impl DiaryEntryListState {
@@ -211,28 +210,8 @@ impl DiaryEntryListState {
   pub fn open(&self, note_id: &str) {
     navigator().push(Route::DiaryEntry { note_id: note_id.to_string() });
   }
-
-  pub fn request_delete(&mut self, note_id: &str) {
-    self.pending_delete.set(Some(note_id.to_string()));
-  }
-
-  pub fn cancel_delete(&mut self) {
-    self.pending_delete.set(None);
-  }
-
-  pub fn confirm_delete(&mut self) {
-    if let Some(note_id) = (self.pending_delete)() {
-      self.store.delete_note(&note_id);
-    }
-    self.pending_delete.set(None);
-  }
 }
 
 pub fn use_diary_entry_list() -> DiaryEntryListState {
-  DiaryEntryListState {
-    store: use_notes(),
-    diary_ui: use_diary_ui(),
-    is_mobile: use_is_mobile(),
-    pending_delete: use_signal(|| None),
-  }
+  DiaryEntryListState { store: use_notes(), diary_ui: use_diary_ui(), is_mobile: use_is_mobile() }
 }

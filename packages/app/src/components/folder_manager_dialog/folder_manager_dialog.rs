@@ -113,7 +113,8 @@ pub fn FolderManagerPanel(props: FolderManagerPanelProps) -> Element {
   let mut draft_icon = panel.draft_icon;
   let is_mobile = panel.is_mobile;
   let folders = store.folders();
-  let pending_delete_name = (panel.pending_delete)()
+  let pending_delete_id = (panel.pending_delete)();
+  let pending_delete_name = pending_delete_id
     .as_ref()
     .and_then(|id| folders.iter().find(|folder| &folder.id == id))
     .map(|folder| folder.name.clone())
@@ -207,7 +208,7 @@ pub fn FolderManagerPanel(props: FolderManagerPanelProps) -> Element {
               }
           }
           ConfirmDialog {
-              open: (panel.pending_delete)().is_some(),
+              open: pending_delete_id.is_some(),
               on_open_change: move |_| panel.cancel_delete(),
               icon: rsx! { FolderGlyph { size: "20px", stroke: "var(--primary-error-color)" } },
               title: "Delete folder?",
@@ -217,7 +218,11 @@ pub fn FolderManagerPanel(props: FolderManagerPanelProps) -> Element {
                       " — Its notes will move to no folder. This can't be undone."
                   }
               },
-              on_confirm: move |_| panel.confirm_delete(),
+              on_confirm: move |_| {
+                  if let Some(folder_id) = pending_delete_id.clone() {
+                      panel.confirm_delete(&folder_id);
+                  }
+              },
           }
       }
   }

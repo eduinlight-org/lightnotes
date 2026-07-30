@@ -1,0 +1,15 @@
+[bundle]
+identifier = "dev.lightnotes.mobile"
+publisher = "LightNotes"
+
+[android]
+icon = [
+  "icons/android/mipmap-mdpi/ic_launcher.png",
+  "icons/android/mipmap-hdpi/ic_launcher.png",
+  "icons/android/mipmap-xhdpi/ic_launcher.png",
+  "icons/android/mipmap-xxhdpi/ic_launcher.png",
+  "icons/android/mipmap-xxxhdpi/ic_launcher.png",
+]
+
+[ios]
+icon = ["icons/ios/AppIcon.appiconset/icon-1024.png"]

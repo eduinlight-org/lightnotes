@@ -39,10 +39,8 @@ impl FolderManagerPanelState {
     self.pending_delete.set(None);
   }
 
-  pub fn confirm_delete(&mut self) {
-    if let Some(folder_id) = (self.pending_delete)() {
-      self.store.delete_folder(&folder_id);
-    }
+  pub fn confirm_delete(&mut self, folder_id: &str) {
+    self.store.delete_folder(folder_id);
     self.pending_delete.set(None);
   }
 }

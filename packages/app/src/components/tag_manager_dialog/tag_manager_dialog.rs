@@ -19,7 +19,8 @@ pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
   let mut draft = panel.draft;
   let is_mobile = panel.is_mobile;
   let tags = store.tags();
-  let pending_delete_name = (panel.pending_delete)()
+  let pending_delete_id = (panel.pending_delete)();
+  let pending_delete_name = pending_delete_id
     .as_ref()
     .and_then(|id| tags.iter().find(|tag| &tag.id == id))
     .map(|tag| format!("#{}", tag.name))
@@ -111,7 +112,7 @@ pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
               }
           }
           ConfirmDialog {
-              open: (panel.pending_delete)().is_some(),
+              open: pending_delete_id.is_some(),
               on_open_change: move |_| panel.cancel_delete(),
               icon: rsx! { TagIcon { size: "20px", stroke: "var(--primary-error-color)" } },
               title: "Delete tag?",
@@ -121,7 +122,11 @@ pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
                       " — It will be removed from every note. This can't be undone."
                   }
               },
-              on_confirm: move |_| panel.confirm_delete(),
+              on_confirm: move |_| {
+                  if let Some(tag_id) = pending_delete_id.clone() {
+                      panel.confirm_delete(&tag_id);
+                  }
+              },
           }
       }
   }

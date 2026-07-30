@@ -44,7 +44,11 @@ pub fn NoteListItem(props: NoteListItemProps) -> Element {
   };
 
   let icon_size = if is_mobile() { "17px" } else { "14px" };
-  let icon_gap_class = if is_mobile() { "flex flex-none items-center gap-[10px]" } else { "flex flex-none items-center gap-[6px]" };
+  let icon_gap_class = if is_mobile() {
+    "flex flex-none items-center gap-[10px]"
+  } else {
+    "flex flex-none items-center gap-[6px]"
+  };
 
   let snippet_class = if is_mobile() {
     "line-clamp-2 text-[13px] leading-[1.45] text-[color-mix(in_srgb,var(--secondary-color)_58%,transparent)]"

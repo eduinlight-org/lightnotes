@@ -108,8 +108,8 @@ Each target has a `make` shortcut (see the [`Makefile`](Makefile)); the equivale
 | Landing site | `make landing-dev` | `dx serve --package landing --platform web --port $(LANDING_PORT)` |
 | Notes app — web | `make app-web-dev` | `dx serve --package web --platform web --port $(APP_WEB_PORT)` |
 | Notes app — desktop | `make app-desktop-dev` | `dx serve --package desktop --platform desktop` |
-| Notes app — Android | `make app-android-dev` | `dx serve --package mobile --platform android` (needs an emulator/device) |
-| Notes app — iOS | `make app-ios-dev` | `dx serve --package mobile --platform ios` (needs a simulator/device, macOS only) |
+| Notes app — Android | `make app-android-dev` | `dx serve --package light-notes-mobile --platform android` (needs an emulator/device) |
+| Notes app — iOS | `make app-ios-dev` | `dx serve --package light-notes-mobile --platform ios` (needs a simulator/device, macOS only) |
 | Backend API | `make api-dev` | `cargo run -p api` |
 
 The backend API needs MongoDB. Start it (and the mongo-express admin UI) with Docker Compose:

@@ -10,10 +10,10 @@ app-web-dev:
 	dx serve --package web --platform web --port $(APP_WEB_PORT)
 
 app-android-dev:
-	dx serve --package mobile --platform android
+	dx serve --package light-notes-mobile --platform android
 
 app-ios-dev:
-	dx serve --package mobile --platform ios
+	dx serve --package light-notes-mobile --platform ios
 
 app-desktop-dev:
 	dx serve --package desktop --platform desktop
@@ -22,10 +22,10 @@ app-web-build:
 	dx build --package web --platform web --fullstack true --release
 
 app-android-build:
-	dx build --package mobile --platform android --release
+	dx build --package light-notes-mobile --platform android --release
 
 app-ios-build:
-	dx build --package mobile --platform ios --release
+	dx build --package light-notes-mobile --platform ios --release
 
 app-desktop-build:
 	dx build --package desktop --platform desktop --release

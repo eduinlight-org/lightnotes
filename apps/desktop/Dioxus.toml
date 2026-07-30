@@ -1,0 +1,4 @@
+[bundle]
+identifier = "dev.lightnotes.desktop"
+publisher = "LightNotes"
+icon = ["icons/icon.png"]

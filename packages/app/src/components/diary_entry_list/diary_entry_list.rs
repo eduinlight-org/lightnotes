@@ -1,8 +1,8 @@
 use super::use_diary_entry_list::use_diary_entry_list;
-use crate::components::{ConfirmDialog, DiaryCalendar, ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
+use crate::components::{DiaryCalendar, ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
 use crate::Route;
 use dioxus::prelude::*;
-use dioxus_icons::lucide::{BellRing, Feather, FileText, Funnel, Plus, Trash2};
+use dioxus_icons::lucide::{BellRing, Feather, Funnel, Plus};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 use ui::components::popover::ContentAlign;
 
@@ -35,11 +35,6 @@ pub fn DiaryEntryList() -> Element {
     _ => None,
   };
   let entries = list.entries(active_note_id.as_deref());
-  let pending_delete_title = (list.pending_delete)()
-    .as_ref()
-    .and_then(|id| entries.iter().find(|entry| &entry.id == id))
-    .map(|entry| entry.title.clone());
-  let pending_delete_name = pending_delete_title.clone().unwrap_or_else(|| "This note".to_string());
   let is_mobile = list.is_mobile;
   let has_filter = list.filter_folder().is_some() || list.filter_tag().is_some();
   let count_label = if entries.len() == 1 { "1 note".to_string() } else { format!("{} notes", entries.len()) };
@@ -131,7 +126,6 @@ pub fn DiaryEntryList() -> Element {
           for entry in entries {
               {
                   let note_id = entry.id.clone();
-                  let delete_note_id = entry.id.clone();
                   let mobile = is_mobile();
                   let title_class = if mobile {
                     "min-w-0 flex-1 truncate text-[15px] font-medium text-[var(--secondary-color)]"
@@ -161,14 +155,6 @@ pub fn DiaryEntryList() -> Element {
                                   }
                                   if !mobile {
                                       span { class: "flex-none text-[10px] text-[color-mix(in_srgb,var(--secondary-color)_38%,transparent)]", "{entry.folder_name}" }
-                                      button {
-                                          "aria-label": "Delete note",
-                                          onclick: move |event: MouseEvent| {
-                                              event.stop_propagation();
-                                              list.request_delete(&delete_note_id);
-                                          },
-                                          Trash2 { size: "13px", stroke: "color-mix(in srgb,var(--secondary-color) 35%,transparent)" }
-                                      }
                                   }
                               }
                               p { class: snippet_class,
@@ -179,19 +165,6 @@ pub fn DiaryEntryList() -> Element {
                   }
               }
           }
-      }
-      ConfirmDialog {
-          open: (list.pending_delete)().is_some(),
-          on_open_change: move |_| list.cancel_delete(),
-          icon: rsx! { FileText { size: "20px", stroke: "var(--primary-error-color)" } },
-          title: "Delete note?",
-          description: rsx! {
-              span {
-                  strong { "{pending_delete_name}" }
-                  " — This note will be removed from every folder and tag. This can't be undone."
-              }
-          },
-          on_confirm: move |_| list.confirm_delete(),
       }
   }
 }
