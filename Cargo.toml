@@ -16,6 +16,8 @@ members = [
 
 [workspace.dependencies]
 dioxus = { version = "0.7.1" }
+dioxus-i18n = { version = "0.5.1" }
+unic-langid = { version = "0.9", features = ["macros"] }
 
 # workspace
 ui = { path = "packages/ui" }

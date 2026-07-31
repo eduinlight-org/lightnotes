@@ -1,3 +1,6 @@
+mod language_selector;
+pub use language_selector::LanguageSelector;
+
 mod nav_bar;
 pub use nav_bar::NavBar;
 

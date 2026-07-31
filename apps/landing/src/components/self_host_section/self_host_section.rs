@@ -1,14 +1,13 @@
-use crate::theme::PRIMARY_BUTTON_CLASS;
 use dioxus::prelude::*;
-use ui::components::button::{Button, ButtonSize, ButtonVariant};
+use dioxus_i18n::t;
 
 const SETUP_GUIDE_URL: &str = "https://github.com/eduinlight/lightnotes#getting-started";
 
 const COMMANDS: [(&str, &str); 4] = [
   ("cp .env.dist .env", ""),
-  ("make docker-up", "mongo + admin UI"),
-  ("make api-dev", "sync API"),
-  ("make app-web-dev", "or app-desktop-dev"),
+  ("make docker-up", "selfhost-comment-docker"),
+  ("make api-dev", "selfhost-comment-api"),
+  ("make app-web-dev", "selfhost-comment-app"),
 ];
 
 #[component]
@@ -16,36 +15,33 @@ pub fn SelfHostSection() -> Element {
   rsx! {
       section {
           id: "selfhost",
-          class: "mx-auto grid max-w-6xl items-start gap-10 px-6 py-20 lg:grid-cols-2 lg:gap-16",
+          class: "wrap grid items-start gap-10 pt-[72px] pb-10 min-[720px]:grid-cols-2 min-[720px]:gap-x-[clamp(28px,5vw,88px)]",
           div {
-              span { class: "block text-xs uppercase tracking-wider text-[#9a8fe0]", "Self-hosting" }
+              span { class: "kicker", {t!("selfhost-kicker")} }
               h2 {
-                  class: "mt-3 text-[clamp(1.75rem,3vw,2.25rem)] font-medium leading-tight tracking-tight text-white",
-                  "Run the whole thing yourself."
+                  class: "text-[clamp(28px,3vw,36px)] leading-[1.16] tracking-[-0.012em]",
+                  {t!("selfhost-title")}
               }
               p {
-                  class: "mt-6 max-w-[48ch] leading-relaxed text-white/80",
-                  "You run the axum API next to the clients: REST and SSE over MongoDB, started with Docker Compose. Stable Rust and the Dioxus CLI are the only prerequisites — Tailwind compiles inside "
-                  code { class: "font-mono text-sm text-[#c2b9f0]", "dx build" }
-                  ", so there is no Node step. A hosted cloud version is in development."
+                  class: "mt-[22px] max-w-[48ch] text-[16px] leading-[1.68] text-copy",
+                  {t!("selfhost-description-before")}
+                  " "
+                  code { class: "font-mono text-[14px] text-accent-300", "dx build" }
+                  {t!("selfhost-description-after")}
               }
               div {
-                  class: "mt-6 flex flex-wrap gap-3",
-                  a {
-                      href: SETUP_GUIDE_URL,
-                      class: "no-underline",
-                      Button { variant: ButtonVariant::Primary, size: ButtonSize::Sm, class: PRIMARY_BUTTON_CLASS, "Read the setup guide" }
-                  }
+                  class: "mt-[26px] flex flex-wrap gap-3",
+                  a { class: "btn btn-primary btn-md", href: SETUP_GUIDE_URL, {t!("selfhost-setup-guide")} }
               }
           }
           div {
-              class: "grid gap-1 rounded-xl bg-white/5 px-6 py-5 font-mono text-[13.5px] leading-loose text-[#d4d4d4]",
-              for (command , comment) in COMMANDS {
+              class: "grid gap-0.5 rounded-md bg-surface px-6 py-[22px] font-mono text-[13.5px] leading-[2] text-neutral-300 shadow-sm",
+              for (command , comment_key) in COMMANDS {
                   div {
-                      span { class: "text-white/40", "$ " }
-                      "{command}"
-                      if !comment.is_empty() {
-                          span { class: "text-white/40", "  # {comment}" }
+                      span { class: "text-neutral-600", "$ " }
+                      "{command} "
+                      if !comment_key.is_empty() {
+                          span { class: "text-neutral-600", "# " {t!(comment_key)} }
                       }
                   }
               }

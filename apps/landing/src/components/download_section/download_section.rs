@@ -1,7 +1,5 @@
-use crate::theme::{CARD_CLASS, OUTLINED_BUTTON_CLASS, PRIMARY_BUTTON_CLASS};
 use dioxus::prelude::*;
-use ui::components::badge::{Badge, BadgeVariant};
-use ui::components::button::{Button, ButtonSize, ButtonVariant};
+use dioxus_i18n::t;
 
 const GITHUB_BUILD_URL: &str = "https://github.com/eduinlight/lightnotes#building-for-release";
 const WEB_APP_URL: &str = "https://lightnotes.eduindev.com";
@@ -16,11 +14,11 @@ enum Platform {
 }
 
 const DOWNLOADS: [(Platform, &str, &str, &str); 5] = [
-  (Platform::MacOs, "macOS", "Universal .dmg — Apple silicon & Intel", "Coming soon"),
-  (Platform::Windows, "Windows", "Signed .exe installer, x86-64", "Coming soon"),
-  (Platform::Linux, "Linux", "AppImage and .deb packages", "Coming soon"),
-  (Platform::Ios, "iOS", "App Store — iPhone and iPad", "In review"),
-  (Platform::Android, "Android", "Google Play — phones and tablets", "In review"),
+  (Platform::MacOs, "macOS", "download-macos-description", "download-status-coming-soon"),
+  (Platform::Windows, "Windows", "download-windows-description", "download-status-coming-soon"),
+  (Platform::Linux, "Linux", "download-linux-description", "download-status-coming-soon"),
+  (Platform::Ios, "iOS", "download-ios-description", "download-status-in-review"),
+  (Platform::Android, "Android", "download-android-description", "download-status-in-review"),
 ];
 
 fn platform_icon_class(platform: Platform) -> &'static str {
@@ -38,52 +36,39 @@ pub fn DownloadSection() -> Element {
   rsx! {
       section {
           id: "download",
-          class: "mx-auto max-w-6xl px-6 py-20",
+          class: "wrap pt-[72px] pb-10",
+          span { class: "kicker", {t!("download-kicker")} }
           div {
-              class: "flex flex-wrap items-baseline justify-between gap-4",
-              span { class: "block text-xs uppercase tracking-wider text-[#9a8fe0]", "Download" }
-          }
-          div {
-              class: "mt-3 flex flex-wrap items-baseline justify-between gap-4",
+              class: "flex flex-wrap items-baseline justify-between gap-x-8 gap-y-4",
               h2 {
-                  class: "max-w-[24ch] text-[clamp(1.75rem,3vw,2.25rem)] font-medium leading-tight tracking-tight text-white",
-                  "Get the app on your platform."
+                  class: "max-w-[24ch] text-[clamp(28px,3vw,36px)] leading-[1.16] tracking-[-0.012em]",
+                  {t!("download-title")}
               }
-              Badge { variant: BadgeVariant::Outline, "Builds in progress" }
+              span { class: "tag tag-outline", {t!("download-badge")} }
           }
           div {
-              class: "mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3",
-              for (platform , title , description , status) in DOWNLOADS {
+              class: "mt-10 grid grid-cols-[repeat(auto-fit,minmax(230px,1fr))] gap-4",
+              for (platform , title , description_key , status_key) in DOWNLOADS {
                   div {
-                      class: "flex flex-col gap-2.5 rounded-xl px-5 py-[18px] shadow-sm {CARD_CLASS}",
-                      i { class: "{platform_icon_class(platform)} text-2xl leading-none text-[#9a8fe0]" }
-                      span { class: "mt-1 text-base font-semibold text-white", "{title}" }
-                      span { class: "text-sm text-white/60", "{description}" }
-                      div {
-                          class: "mt-1.5 self-start",
-                          Badge { variant: BadgeVariant::Secondary, "{status}" }
-                      }
+                      class: "card elev-sm gap-2.5 px-5 py-[18px]",
+                      i { class: "{platform_icon_class(platform)} text-2xl leading-none text-accent" }
+                      span { class: "card-title mt-1", "{title}" }
+                      span { class: "text-[13px] text-copy-faint", {t!(description_key)} }
+                      span { class: "tag tag-neutral mt-1.5 self-start", {t!(status_key)} }
                   }
               }
           }
           p {
-              class: "mt-8 max-w-[62ch] leading-relaxed text-white/70",
-              "Packaged builds aren't out yet. Until they are, the web app runs today and every desktop and mobile target builds from source with a single "
-              code { class: "font-mono text-sm text-[#c2b9f0]", "make" }
-              " command."
+              class: "mt-[26px] max-w-[62ch] text-[15px] leading-[1.7] text-copy-mid",
+              {t!("download-note-before")}
+              " "
+              code { class: "font-mono text-[14px] text-accent-300", "make" }
+              {t!("download-note-after")}
           }
           div {
-              class: "mt-6 flex flex-wrap gap-3",
-              a {
-                  href: WEB_APP_URL,
-                  class: "no-underline",
-                  Button { variant: ButtonVariant::Primary, size: ButtonSize::Sm, class: PRIMARY_BUTTON_CLASS, "Open the web app" }
-              }
-              a {
-                  href: GITHUB_BUILD_URL,
-                  class: "no-underline",
-                  Button { variant: ButtonVariant::Outline, size: ButtonSize::Sm, class: OUTLINED_BUTTON_CLASS, "Build from source" }
-              }
+              class: "mt-[22px] flex flex-wrap gap-3",
+              a { class: "btn btn-primary btn-md", href: WEB_APP_URL, {t!("download-open-web-app")} }
+              a { class: "btn btn-secondary btn-md", href: GITHUB_BUILD_URL, {t!("download-build-from-source")} }
           }
       }
   }

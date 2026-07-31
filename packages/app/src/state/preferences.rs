@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use super::language::Language;
 use super::notes::{NotesStore, Theme};
 
 const PREFS_KEY: &str = "lightnotes:prefs:v1";
@@ -9,6 +10,8 @@ const PREFS_KEY: &str = "lightnotes:prefs:v1";
 struct Prefs {
   theme: Theme,
   accent: String,
+  #[serde(default)]
+  language: Language,
 }
 
 pub fn use_persisted_preferences(mut store: NotesStore) {
@@ -21,6 +24,7 @@ pub fn use_persisted_preferences(mut store: NotesStore) {
         if let Ok(prefs) = serde_json::from_str::<Prefs>(&json) {
           store.set_theme(prefs.theme);
           store.set_accent(prefs.accent);
+          store.set_language(prefs.language);
         }
       }
       loaded.set(true);
@@ -29,7 +33,7 @@ pub fn use_persisted_preferences(mut store: NotesStore) {
 
   use_effect(move || {
     let is_loaded = loaded();
-    let prefs = Prefs { theme: store.theme(), accent: store.accent() };
+    let prefs = Prefs { theme: store.theme(), accent: store.accent(), language: store.language() };
 
     if !is_loaded {
       return;

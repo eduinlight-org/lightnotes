@@ -2,6 +2,7 @@ use super::use_folder_picker::use_folder_picker;
 use crate::components::{ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
 use crate::state::{FolderIcon, Note};
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{
   Archive, Bookmark, BookOpen, Briefcase, Calendar, Camera, ChevronDown, Code, FileText, Gift,
   Globe, Heart, House, Inbox, Lock, Music, Notebook, Palette, Rocket, Settings, Star, User,
@@ -45,7 +46,7 @@ pub fn FolderPicker(props: FolderPickerProps) -> Element {
   let note_id = note.id.clone();
   let folders = picker.store.folders();
   let current = folders.iter().find(|folder| Some(&folder.id) == note.folder_id.as_ref()).cloned();
-  let folder_name = current.as_ref().map(|folder| folder.name.clone()).unwrap_or_else(|| "No folder".to_string());
+  let folder_name = current.as_ref().map(|folder| folder.name.clone()).unwrap_or_else(|| t!("folder-none"));
 
   rsx! {
       ResponsivePopoverRoot {
@@ -53,7 +54,7 @@ pub fn FolderPicker(props: FolderPickerProps) -> Element {
           on_open_change: move |value| picker.open.set(value),
           ResponsivePopoverTrigger {
               class: "flex h-8 items-center gap-1.5 rounded-md border border-[var(--primary-color-6)] px-2.5 text-xs text-[var(--secondary-color)]",
-              title: "Move to folder",
+              title: t!("folder-move-to"),
               span { style: "display:flex;color:var(--accent)",
                   if let Some(folder) = current.as_ref() {
                       {folder_icon(folder.icon)}
@@ -65,7 +66,7 @@ pub fn FolderPicker(props: FolderPickerProps) -> Element {
               ChevronDown { size: "11px" }
           }
           ResponsivePopoverContent {
-              title: "Move to folder",
+              title: t!("folder-move-to"),
               align: ContentAlign::Start,
               class: "w-52 items-stretch gap-1 p-1.5 text-left",
               div {
@@ -79,7 +80,7 @@ pub fn FolderPicker(props: FolderPickerProps) -> Element {
                       move |_| picker.move_to_folder(&note_id, None)
                   },
                   FileText { size: "15px" }
-                  "No folder"
+                  {t!("folder-none")}
               }
               for folder in folders {
                   {

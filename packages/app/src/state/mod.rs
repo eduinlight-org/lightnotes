@@ -18,3 +18,9 @@ pub mod date_math;
 
 mod diary;
 pub use diary::{use_diary_ui, CalendarViewMode, DiaryUiState};
+
+mod language;
+pub use language::{Language, LANGUAGES};
+
+pub mod i18n;
+pub use i18n::use_app_i18n;

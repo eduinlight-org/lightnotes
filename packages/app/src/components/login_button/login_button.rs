@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::LogIn;
 use ui::components::button::{Button, ButtonVariant};
 
@@ -14,7 +15,7 @@ pub fn LoginButton(props: LoginButtonProps) -> Element {
   rsx! {
       Button { variant: ButtonVariant::Outline, onclick,
           LogIn { size: "16px" }
-          span { class: "hidden sm:inline", "Log in" }
+          span { class: "hidden sm:inline", {t!("action-log-in")} }
       }
   }
 }

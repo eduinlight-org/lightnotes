@@ -1,6 +1,7 @@
 use crate::components::FolderManagerPanel;
 use crate::Route;
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::ArrowLeft;
 
 #[component]
@@ -14,9 +15,9 @@ pub fn FoldersScreen() -> Element {
                       navigator().push(Route::Notes {});
                   },
                   ArrowLeft { size: "18px" }
-                  "Notes"
+                  {t!("section-notes")}
               }
-              h1 { class: "flex-1 text-lg font-medium text-[var(--secondary-color)]", "Folders" }
+              h1 { class: "flex-1 text-lg font-medium text-[var(--secondary-color)]", {t!("folders-title")} }
           }
           div { class: "flex min-h-0 flex-1 flex-col overflow-hidden p-4",
               FolderManagerPanel {

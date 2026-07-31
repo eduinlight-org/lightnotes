@@ -260,6 +260,8 @@ pub fn Sidebar(
     #[props(default)] side: SidebarSide,
     #[props(default)] variant: SidebarVariant,
     #[props(default)] collapsible: SidebarCollapsible,
+    #[props(default = "Sidebar".to_string())] label: String,
+    #[props(default = "Displays the mobile sidebar.".to_string())] description: String,
     #[props(extends = GlobalAttributes)] attributes: Vec<Attribute>,
     children: Element,
 ) -> Element {
@@ -302,8 +304,8 @@ pub fn Sidebar(
                 "data-mobile": "true",
                 SheetContentClose { class: Styles::dx_sidebar_sheet_close }
                 SheetHeader { class: Styles::dx_sr_only,
-                    SheetTitle { "Sidebar" }
-                    SheetDescription { "Displays the mobile sidebar." }
+                    SheetTitle { "{label}" }
+                    SheetDescription { "{description}" }
                 }
                 div { class: Styles::dx_sidebar_mobile_inner, {children} }
             }
@@ -347,6 +349,7 @@ pub fn Sidebar(
 #[component]
 pub fn SidebarTrigger(
     #[props(default)] onclick: Option<EventHandler<MouseEvent>>,
+    #[props(default = "Toggle Sidebar".to_string())] label: String,
     #[props(extends = GlobalAttributes)]
     #[props(extends = button)]
     attributes: Vec<Attribute>,
@@ -374,7 +377,7 @@ pub fn SidebarTrigger(
                 class: Styles::dx_sidebar_trigger_icon,
                 size: "1rem",
             }
-            span { class: Styles::dx_sr_only, "Toggle Sidebar" }
+            span { class: Styles::dx_sr_only, "{label}" }
         }
     }
 }

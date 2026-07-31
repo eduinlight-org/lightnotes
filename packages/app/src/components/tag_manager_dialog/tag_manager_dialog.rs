@@ -1,6 +1,7 @@
 use super::use_tag_manager_dialog::{use_tag_manager_dialog, use_tag_manager_panel};
 use crate::components::ConfirmDialog;
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{Tag as TagIcon, Trash2, X};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 use ui::components::dialog::{Dialog, DialogDescription, DialogTitle};
@@ -24,7 +25,7 @@ pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
     .as_ref()
     .and_then(|id| tags.iter().find(|tag| &tag.id == id))
     .map(|tag| format!("#{}", tag.name))
-    .unwrap_or_else(|| "This tag".to_string());
+    .unwrap_or_else(|| t!("tags-delete-fallback-name"));
 
   let input_row_class = if is_mobile() {
     "flex h-11 items-center gap-2 rounded-[11px] border border-[var(--primary-color-6)] bg-[var(--primary-color-2)] px-[13px] focus-within:border-[var(--accent)]"
@@ -39,7 +40,7 @@ pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
       div { class: panel_class,
           if !is_mobile() {
               p { class: "text-sm text-[var(--secondary-color-5)]",
-                  "Create a tag, tap one to filter, or delete it everywhere. {tags.len()} tags in use."
+                  {t!("tags-hint", count: tags.len() as i64)}
               }
           }
           div { class: input_row_class,
@@ -50,7 +51,7 @@ pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
               }
               Input {
                   class: "h-full flex-1 border-none bg-transparent p-0 text-[13px] shadow-none [outline:none] hover:bg-transparent focus:bg-transparent focus:shadow-none",
-                  placeholder: "New tag name…",
+                  placeholder: t!("tags-new-placeholder"),
                   value: draft(),
                   oninput: move |event: FormEvent| draft.set(event.value()),
                   onkeydown: move |event: KeyboardEvent| {
@@ -64,12 +65,12 @@ pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
                   size: ButtonSize::Sm,
                   class: "flex-none border border-[var(--accent)] bg-transparent text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]",
                   onclick: move |_| panel.submit(),
-                  "Add"
+                  {t!("action-add")}
               }
           }
           div { class: list_class,
               if tags.is_empty() {
-                  p { class: "px-2 py-6 text-center text-sm text-[var(--secondary-color-5)]", "No tags yet." }
+                  p { class: "px-2 py-6 text-center text-sm text-[var(--secondary-color-5)]", {t!("tags-empty")} }
               }
               for tag in tags {
                   {
@@ -95,11 +96,11 @@ pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
                                   "#{tag.name}"
                               }
                               span { class: "text-xs text-[var(--secondary-color-5)]",
-                                  if is_mobile() { "{count} notes" } else { "{count}" }
+                                  if is_mobile() { {t!("notes-count", count: count as i64)} } else { "{count}" }
                               }
                               button {
                                   class: "flex-none text-[var(--secondary-color-5)] hover:text-[#ec6a5e]",
-                                  "aria-label": "Delete tag",
+                                  "aria-label": t!("tags-delete"),
                                   onclick: move |event: MouseEvent| {
                                       event.stop_propagation();
                                       panel.request_delete(&tag_id_for_delete);
@@ -115,11 +116,12 @@ pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
               open: pending_delete_id.is_some(),
               on_open_change: move |_| panel.cancel_delete(),
               icon: rsx! { TagIcon { size: "20px", stroke: "var(--primary-error-color)" } },
-              title: "Delete tag?",
+              title: t!("tags-delete-title"),
               description: rsx! {
                   span {
                       strong { "{pending_delete_name}" }
-                      " — It will be removed from every note. This can't be undone."
+                      " — "
+                      {t!("tags-delete-description")}
                   }
               },
               on_confirm: move |_| {
@@ -142,14 +144,14 @@ pub fn TagManagerDialog() -> Element {
           on_open_change: move |value| dialog.set_open(value),
           class: "max-h-[calc(100vh-32px)] flex flex-col overflow-hidden",
           div { class: "flex flex-none items-center justify-between",
-              DialogTitle { class: "text-[var(--secondary-color)] font-medium!", "Manage tags" }
+              DialogTitle { class: "text-[var(--secondary-color)] font-medium!", {t!("tags-manage-title")} }
               button {
-                  "aria-label": "Close",
+                  "aria-label": t!("action-close"),
                   onclick: move |_| dialog.close(),
                   X { size: "18px", stroke: "var(--secondary-color-5)" }
               }
           }
-          DialogDescription { class: "sr-only", "Create, filter by, or delete tags" }
+          DialogDescription { class: "sr-only", {t!("tags-manage-description")} }
           TagManagerPanel { on_select: move |_| dialog.close() }
           div { class: "flex flex-none justify-end pt-2",
               Button {
@@ -157,7 +159,7 @@ pub fn TagManagerDialog() -> Element {
                   size: ButtonSize::Sm,
                   class: "border border-[var(--primary-color-6)] bg-transparent hover:bg-[color-mix(in_srgb,var(--secondary-color)_5%,transparent)]",
                   onclick: move |_| dialog.close(),
-                  "Close"
+                  {t!("action-close")}
               }
           }
       }

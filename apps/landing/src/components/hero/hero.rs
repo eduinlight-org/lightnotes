@@ -1,7 +1,5 @@
-use crate::theme::{OUTLINED_BUTTON_CLASS, PRIMARY_BUTTON_CLASS};
 use dioxus::prelude::*;
-use ui::components::badge::{Badge, BadgeVariant};
-use ui::components::button::{Button, ButtonSize, ButtonVariant};
+use dioxus_i18n::t;
 
 const HERO_SHOT: Asset = asset!("/assets/screenshots/desktop-notes-list.png");
 const GITHUB_URL: &str = "https://github.com/eduinlight/lightnotes";
@@ -12,44 +10,36 @@ pub fn Hero() -> Element {
   rsx! {
       section {
           id: "hero",
-          class: "mx-auto grid max-w-6xl gap-14 px-6 pt-16 pb-4 sm:pt-24 lg:grid-cols-2 lg:items-center",
+          class: "wrap grid gap-14 pt-24",
           div {
-              class: "max-w-xl",
+              class: "max-w-[780px]",
               h1 {
-                  class: "text-[clamp(2rem,5vw,4rem)] font-medium leading-[1.06] tracking-tight text-white",
-                  span { class: "block", "Notes that live on" }
-                  span { class: "block", "your machine first" }
+                  class: "-ml-[0.06em] text-[clamp(44px,6.2vw,84px)] leading-[1.06] tracking-[-0.02em]",
+                  span { class: "block", {t!("hero-title-line-1")} }
+                  span { class: "block", {t!("hero-title-line-2")} }
               }
               p {
-                  class: "mt-8 max-w-[60ch] text-lg leading-relaxed text-white/80",
-                  "LightNotes is a local-first notes app: a rich Markdown editor, folders, tags and a diary calendar, stored on your device and synced through an API you host yourself. One Rust codebase, built with Dioxus, shipping to web, desktop and mobile."
+                  class: "mt-[30px] max-w-[60ch] text-[18px] leading-[1.62] text-copy-strong",
+                  {t!("hero-description")}
               }
               div {
-                  class: "mt-8 flex flex-wrap gap-3",
-                  a {
-                      href: GITHUB_URL,
-                      class: "no-underline",
-                      Button { variant: ButtonVariant::Primary, size: ButtonSize::Lg, class: PRIMARY_BUTTON_CLASS, "Clone the repo" }
-                  }
-                  a {
-                      href: WEB_APP_URL,
-                      class: "no-underline",
-                      Button { variant: ButtonVariant::Outline, size: ButtonSize::Lg, class: OUTLINED_BUTTON_CLASS, "Try the web app" }
-                  }
+                  class: "mt-[30px] flex flex-wrap gap-3",
+                  a { class: "btn btn-primary btn-lg", href: GITHUB_URL, {t!("hero-clone-repo")} }
+                  a { class: "btn btn-secondary btn-lg", href: WEB_APP_URL, {t!("hero-try-web-app")} }
               }
               div {
-                  class: "mt-6 flex flex-wrap items-center gap-2",
-                  Badge { variant: BadgeVariant::Outline, "MIT licensed" }
-                  Badge { variant: BadgeVariant::Secondary, "Rust · Dioxus 0.7" }
-                  Badge { variant: BadgeVariant::Secondary, "Self-hosted sync" }
+                  class: "mt-[26px] flex flex-wrap items-center gap-2.5",
+                  span { class: "tag tag-outline", {t!("hero-tag-license")} }
+                  span { class: "tag tag-neutral", {t!("hero-tag-stack")} }
+                  span { class: "tag tag-neutral", {t!("hero-tag-sync")} }
               }
           }
           figure {
-              class: "m-0 rounded-2xl bg-white/5 p-2 shadow-2xl",
+              class: "overflow-hidden rounded-lg bg-surface p-2 shadow-md",
               img {
                   src: HERO_SHOT,
-                  alt: "LightNotes notes list on desktop",
-                  class: "block w-full rounded-xl",
+                  alt: t!("hero-screenshot-alt"),
+                  class: "w-full rounded-[10px]",
               }
           }
       }

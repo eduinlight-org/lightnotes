@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{Search, X};
 use ui::components::input::Input;
 
@@ -43,14 +44,14 @@ pub fn SearchInput(props: SearchInputProps) -> Element {
               class: format!(
                   "h-full flex-1 border-none bg-transparent p-0 text-[{text_size}] shadow-none [outline:none] hover:bg-transparent focus:bg-transparent focus:shadow-none",
               ),
-              placeholder: "Search notes…",
+              placeholder: t!("notes-search-placeholder"),
               value,
               oninput: move |event: FormEvent| on_search.call(event.value()),
           }
           if has_value {
               button {
                   class: "flex flex-none items-center text-[var(--secondary-color-5)]",
-                  "aria-label": "Clear search",
+                  "aria-label": t!("notes-clear-search"),
                   onclick: move |_| on_search.call(String::new()),
                   X { size: clear_size }
               }

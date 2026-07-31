@@ -2,7 +2,9 @@ use crate::components::{CtaBand, DownloadSection, FeatureList, Hero, PlatformsSe
 use dioxus::prelude::*;
 
 #[component]
-pub fn Home() -> Element {
+pub fn Home(lang: String) -> Element {
+  let _ = lang;
+
   rsx! {
       Hero {}
       StatsBand {}

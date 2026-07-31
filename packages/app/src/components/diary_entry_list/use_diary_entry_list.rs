@@ -1,6 +1,7 @@
-use crate::state::{date_math, now_ms, use_diary_ui, use_notes, CalendarViewMode, DiaryUiState, Folder, Note, NotesStore, Tag};
+use crate::state::{date_math, i18n, now_ms, use_diary_ui, use_notes, CalendarViewMode, DiaryUiState, Folder, Note, NotesStore, Tag};
 use crate::Route;
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use ui::components::sidebar::use_is_mobile;
 
 fn snippet(markdown: &str) -> String {
@@ -37,7 +38,7 @@ impl DiaryEntryListState {
     let (year, month, day, _, _) = date_math::date_ms_to_ymdhm(cursor_ms);
 
     match (self.diary_ui.view_mode)() {
-      CalendarViewMode::Month => format!("{} {year}", date_math::month_name(month)),
+      CalendarViewMode::Month => format!("{} {year}", i18n::month_name(month)),
       CalendarViewMode::Week => {
         let cursor_days = date_math::day_key(cursor_ms);
         let week_start_days = cursor_days - date_math::weekday_index(cursor_days) as i64;
@@ -46,14 +47,14 @@ impl DiaryEntryListState {
         let (end_year, end_month, end_day) = date_math::civil_from_days(week_end_days);
         format!(
           "{start_day} {} \u{2013} {end_day} {} {end_year}",
-          &date_math::month_name(start_month)[..3],
-          &date_math::month_name(end_month)[..3]
+          i18n::month_short_name(start_month),
+          i18n::month_short_name(end_month)
         )
       }
       CalendarViewMode::Day => {
         let cursor_days = date_math::day_key(cursor_ms);
-        let weekday = date_math::weekday_name(date_math::weekday_index(cursor_days));
-        format!("{weekday}, {day} {} {year}", date_math::month_name(month))
+        let weekday = i18n::weekday_short_name(date_math::weekday_index(cursor_days));
+        format!("{weekday}, {day} {} {year}", i18n::month_name(month))
       }
     }
   }
@@ -61,7 +62,7 @@ impl DiaryEntryListState {
   pub fn filter_summary(&self) -> String {
     let folder_label = match (self.diary_ui.filter_folder)() {
       Some(folder_id) => self.store.folders().into_iter().find(|folder| folder.id == folder_id).map(|folder| folder.name).unwrap_or_default(),
-      None => "All folders".to_string(),
+      None => t!("diary-all-folders"),
     };
 
     match (self.diary_ui.filter_tag)() {
@@ -175,10 +176,10 @@ impl DiaryEntryListState {
 
         let (_, _, _, hour, minute) = date_math::date_ms_to_ymdhm(note.date_ms);
         let (_, month, day_of_month) = date_math::civil_from_days(day);
-        let weekday = date_math::weekday_name(date_math::weekday_index(day));
-        let month_short = &date_math::month_name(month)[..3];
+        let weekday = i18n::weekday_short_name(date_math::weekday_index(day));
+        let month_short = i18n::month_short_name(month);
         let day_header_label = if day == today_days {
-          format!("Today \u{b7} {weekday} {day_of_month} {month_short}")
+          format!("{} \u{b7} {weekday} {day_of_month} {month_short}", t!("diary-today"))
         } else {
           format!("{weekday} {day_of_month} {month_short}")
         };
@@ -194,7 +195,7 @@ impl DiaryEntryListState {
 
         DiaryEntryRow {
           id: note.id.clone(),
-          title: if note.title.is_empty() { "Untitled note".to_string() } else { note.title.clone() },
+          title: if note.title.is_empty() { t!("notes-untitled-note") } else { note.title.clone() },
           snippet: snippet(&note.content),
           time_label: format!("{hour:02}:{minute:02}"),
           folder_name,

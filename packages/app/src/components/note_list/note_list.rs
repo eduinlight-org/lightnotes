@@ -1,6 +1,7 @@
 use super::use_note_list::use_note_list;
 use crate::components::{NoteListItem, SearchInput};
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{Inbox, Plus, Search};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 use ui::components::sidebar::SidebarTrigger;
@@ -16,18 +17,18 @@ pub fn NoteList() -> Element {
 
   let (title, subtitle) = if has_search {
     (
-      "Search".to_string(),
-      format!("{} result{} for \u{201c}{}\u{201d}", notes.len(), if notes.len() == 1 { "" } else { "s" }, search.trim()),
+      t!("notes-search-title"),
+      t!("notes-search-results", count: notes.len() as i64, query: search.trim()),
     )
   } else {
-    (store.filter_title(), format!("{} notes", notes.len()))
+    (store.filter_title(), t!("notes-count", count: notes.len() as i64))
   };
 
   rsx! {
       div { class: "flex h-full w-full flex-col border-r border-[var(--primary-color-6)] md:w-80",
           div { class: "flex flex-none flex-col gap-2 border-b border-[var(--primary-color-6)] p-3",
               div { class: "flex items-center gap-2",
-                  SidebarTrigger {}
+                  SidebarTrigger { label: t!("sidebar-toggle") }
                   div { class: "min-w-0 flex-1",
                       div { class: "truncate text-base font-medium text-[var(--secondary-color)]", "{title}" }
                       div { class: "truncate text-xs text-[var(--secondary-color-5)]", "{subtitle}" }
@@ -36,7 +37,7 @@ pub fn NoteList() -> Element {
                       variant: ButtonVariant::Secondary,
                       size: ButtonSize::IconSm,
                       class: "border border-[var(--primary-color-6)] bg-transparent hover:bg-[color-mix(in_srgb,var(--secondary-color)_5%,transparent)]",
-                      "aria-label": "New note",
+                      "aria-label": t!("action-new-note"),
                       onclick: move |_| note_list.create_note(),
                       Plus { size: "16px" }
                   }
@@ -52,10 +53,10 @@ pub fn NoteList() -> Element {
                           Inbox { size: "36px", class: "opacity-40" }
                       }
                       div { class: "text-sm font-medium text-[var(--secondary-color)]",
-                          if has_search { "No matches" } else { "No notes yet" }
+                          if has_search { {t!("notes-empty-no-matches")} } else { {t!("notes-empty-no-notes")} }
                       }
                       p { class: "max-w-[200px] text-xs text-[var(--secondary-color-5)]",
-                          if has_search { "Try a different search term." } else { "Create your first note in this view." }
+                          if has_search { {t!("notes-empty-search-hint")} } else { {t!("notes-empty-hint")} }
                       }
                   }
               }

@@ -2,6 +2,7 @@ use super::use_folder_manager_dialog::{use_folder_manager_dialog, use_folder_man
 use crate::components::{ConfirmDialog, ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
 use crate::state::FolderIcon;
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{
   Archive, Bookmark, BookOpen, Briefcase, Calendar, Camera, ChevronDown, Code, Folder as FolderGlyph,
   Gift, Globe, Heart, House, Inbox, Lock, Music, Notebook, Palette, Rocket, Settings, Star, Trash2,
@@ -75,11 +76,11 @@ fn IconPicker(props: IconPickerProps) -> Element {
       ResponsivePopoverRoot {
           ResponsivePopoverTrigger {
               class: "flex flex-none items-center gap-0.5 border-none bg-transparent p-0 text-[var(--accent)]",
-              title: "Change icon",
+              title: t!("folders-change-icon"),
               {folder_icon(current, "16px")}
               ChevronDown { size: "10px" }
           }
-          ResponsivePopoverContent { title: "Change icon", class: "w-52 items-stretch p-2",
+          ResponsivePopoverContent { title: t!("folders-change-icon"), class: "w-52 items-stretch p-2",
               div { class: if is_mobile() { "grid grid-cols-4 gap-2" } else { "grid grid-cols-4 gap-1" },
                   for icon in ALL_FOLDER_ICONS {
                       button {
@@ -118,7 +119,7 @@ pub fn FolderManagerPanel(props: FolderManagerPanelProps) -> Element {
     .as_ref()
     .and_then(|id| folders.iter().find(|folder| &folder.id == id))
     .map(|folder| folder.name.clone())
-    .unwrap_or_else(|| "This folder".to_string());
+    .unwrap_or_else(|| t!("folders-delete-fallback-name"));
 
   let input_row_class = if is_mobile() {
     "flex h-11 items-center gap-2 rounded-[11px] border border-[var(--primary-color-6)] bg-[var(--primary-color-2)] px-[13px] focus-within:border-[var(--accent)]"
@@ -133,14 +134,14 @@ pub fn FolderManagerPanel(props: FolderManagerPanelProps) -> Element {
       div { class: panel_class,
           if !is_mobile() {
               p { class: "text-sm text-[var(--secondary-color-5)]",
-                  "Rename in place, or delete a folder to move its notes to no folder. {folders.len()} folders."
+                  {t!("folders-hint", count: folders.len() as i64)}
               }
           }
           div { class: input_row_class,
               IconPicker { current: draft_icon(), onselect: move |icon| draft_icon.set(icon) }
               Input {
                   class: "h-full flex-1 border-none bg-transparent p-0 text-[13px] shadow-none [outline:none] hover:bg-transparent focus:bg-transparent focus:shadow-none",
-                  placeholder: "New folder name…",
+                  placeholder: t!("folders-new-placeholder"),
                   value: draft(),
                   oninput: move |event: FormEvent| draft.set(event.value()),
                   onkeydown: move |event: KeyboardEvent| {
@@ -154,12 +155,12 @@ pub fn FolderManagerPanel(props: FolderManagerPanelProps) -> Element {
                   size: ButtonSize::Sm,
                   class: "flex-none border border-[var(--accent)] bg-transparent text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]",
                   onclick: move |_| panel.submit(),
-                  "Add"
+                  {t!("action-add")}
               }
           }
           div { class: list_class,
               if folders.is_empty() {
-                  p { class: "px-2 py-6 text-center text-sm text-[var(--secondary-color-5)]", "No folders yet." }
+                  p { class: "px-2 py-6 text-center text-sm text-[var(--secondary-color-5)]", {t!("folders-empty")} }
               }
               for folder in folders {
                   {
@@ -198,7 +199,7 @@ pub fn FolderManagerPanel(props: FolderManagerPanelProps) -> Element {
                               }
                               button {
                                   class: "flex-none text-[var(--secondary-color-5)] hover:text-[#ec6a5e]",
-                                  "aria-label": "Delete folder",
+                                  "aria-label": t!("folders-delete"),
                                   onclick: move |_| panel.request_delete(&folder_id_for_delete),
                                   Trash2 { size: if is_mobile() { "17px" } else { "15px" } }
                               }
@@ -211,11 +212,12 @@ pub fn FolderManagerPanel(props: FolderManagerPanelProps) -> Element {
               open: pending_delete_id.is_some(),
               on_open_change: move |_| panel.cancel_delete(),
               icon: rsx! { FolderGlyph { size: "20px", stroke: "var(--primary-error-color)" } },
-              title: "Delete folder?",
+              title: t!("folders-delete-title"),
               description: rsx! {
                   span {
                       strong { "{pending_delete_name}" }
-                      " — Its notes will move to no folder. This can't be undone."
+                      " — "
+                      {t!("folders-delete-description")}
                   }
               },
               on_confirm: move |_| {
@@ -238,14 +240,14 @@ pub fn FolderManagerDialog() -> Element {
           on_open_change: move |value| dialog.set_open(value),
           class: "max-h-[calc(100vh-32px)] flex flex-col overflow-hidden",
           div { class: "flex flex-none items-center justify-between",
-              DialogTitle { class: "text-[var(--secondary-color)] font-medium!", "Manage folders" }
+              DialogTitle { class: "text-[var(--secondary-color)] font-medium!", {t!("folders-manage-title")} }
               button {
-                  "aria-label": "Close",
+                  "aria-label": t!("action-close"),
                   onclick: move |_| dialog.close(),
                   X { size: "18px", stroke: "var(--secondary-color-5)" }
               }
           }
-          DialogDescription { class: "sr-only", "Create, rename, or delete folders" }
+          DialogDescription { class: "sr-only", {t!("folders-manage-description")} }
           FolderManagerPanel { on_select: move |_| dialog.close() }
           div { class: "flex flex-none justify-end pt-2",
               Button {
@@ -253,7 +255,7 @@ pub fn FolderManagerDialog() -> Element {
                   size: ButtonSize::Sm,
                   class: "border border-[var(--primary-color-6)] bg-transparent hover:bg-[color-mix(in_srgb,var(--secondary-color)_5%,transparent)]",
                   onclick: move |_| dialog.close(),
-                  "Close"
+                  {t!("action-close")}
               }
           }
       }

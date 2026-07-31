@@ -1,56 +1,57 @@
 use dioxus::prelude::*;
-use dioxus_icons::lucide::NotebookPen;
+use dioxus_i18n::t;
 
-const FOOTER_LINK_CLASS: &str = "text-white/60 no-underline hover:text-white";
-const FOOTER_HEADING_CLASS: &str = "text-xs uppercase tracking-wider text-white/40";
+const BRAND_ICON: Asset = asset!("/assets/notes-icon.png");
+
+const FOOTER_HEADING_CLASS: &str = "text-[12px] uppercase tracking-[0.06em] text-copy-ghost";
 
 const PRODUCT_LINKS: [(&str, &str); 4] = [
-  ("#features", "Features"),
-  ("#platforms", "Platforms"),
-  ("#selfhost", "Self-hosting"),
-  ("#download", "Download"),
+  ("#features", "nav-features"),
+  ("#platforms", "nav-platforms"),
+  ("#selfhost", "nav-self-hosting"),
+  ("#download", "nav-download"),
 ];
 
 const SOURCE_LINKS: [(&str, &str); 3] = [
-  ("https://github.com/eduinlight/lightnotes", "Repository"),
-  ("https://github.com/eduinlight/lightnotes/blob/main/LICENSE", "MIT license"),
-  ("https://dioxuslabs.com/", "Dioxus"),
+  ("https://github.com/eduinlight/lightnotes", "footer-repository"),
+  ("https://github.com/eduinlight/lightnotes/blob/main/LICENSE", "footer-license"),
+  ("https://dioxuslabs.com/", "footer-dioxus"),
 ];
 
 #[component]
 pub fn Footer() -> Element {
   rsx! {
       footer {
-          class: "mt-auto border-t border-white/10",
+          class: "rule-top mt-auto",
           div {
-              class: "mx-auto flex max-w-6xl flex-wrap justify-between gap-8 px-6 py-12 text-[13.5px] leading-loose text-white/60",
+              class: "wrap flex flex-wrap items-start justify-between gap-8 pt-10 pb-14 text-[13.5px] leading-[1.9] text-copy-faint",
               div {
                   class: "grid max-w-[34ch] gap-2",
                   span {
-                      class: "flex items-center gap-2 text-base font-medium text-white",
-                      NotebookPen { size: "18px", stroke: "#9a8fe0" }
-                      "LightNotes"
+                      class: "flex items-center gap-[9px] font-heading text-[16px] font-medium text-text",
+                      img { src: BRAND_ICON, alt: "", class: "h-[22px] w-[22px] rounded-[6px]" }
+                      {t!("brand-name")}
                   }
-                  span { "A local-first notes app built with Dioxus 0.7. MIT licensed." }
+                  span { {t!("footer-tagline")} }
               }
               div {
                   class: "grid gap-1.5",
-                  span { class: FOOTER_HEADING_CLASS, "Product" }
-                  for (href , label) in PRODUCT_LINKS {
-                      a { href, class: FOOTER_LINK_CLASS, "{label}" }
-                  }
-              }
-              div {
-                  class: "grid gap-1.5",
-                  span { class: FOOTER_HEADING_CLASS, "Source" }
-                  for (href , label) in SOURCE_LINKS {
-                      a { href, class: FOOTER_LINK_CLASS, "{label}" }
+                  span { class: FOOTER_HEADING_CLASS, {t!("footer-product")} }
+                  for (href , label_key) in PRODUCT_LINKS {
+                      a { href, class: "no-underline", {t!(label_key)} }
                   }
               }
               div {
                   class: "grid gap-1.5",
-                  span { class: FOOTER_HEADING_CLASS, "Contact" }
-                  a { href: "mailto:eduinlight@gmail.com", class: FOOTER_LINK_CLASS, "eduinlight@gmail.com" }
+                  span { class: FOOTER_HEADING_CLASS, {t!("footer-source")} }
+                  for (href , label_key) in SOURCE_LINKS {
+                      a { href, class: "no-underline", {t!(label_key)} }
+                  }
+              }
+              div {
+                  class: "grid gap-1.5",
+                  span { class: FOOTER_HEADING_CLASS, {t!("footer-contact")} }
+                  a { href: "mailto:eduinlight@gmail.com", class: "no-underline", "eduinlight@gmail.com" }
               }
           }
       }

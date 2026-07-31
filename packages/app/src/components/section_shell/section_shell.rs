@@ -1,6 +1,7 @@
 use super::use_section_shell::{use_section_shell, Section};
 use crate::Route;
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{Calendar, Notebook, Settings as SettingsIcon};
 
 fn rail_button_class(active: bool) -> &'static str {
@@ -36,19 +37,19 @@ pub fn SectionShell() -> Element {
                         class: tab_button_class(section == Section::Notes),
                         onclick: move |_| section_shell.go_to_notes(),
                         Notebook { size: "22px" }
-                        "Notes"
+                        {t!("section-notes")}
                     }
                     button {
                         class: tab_button_class(section == Section::Diary),
                         onclick: move |_| section_shell.go_to_diary(),
                         Calendar { size: "22px" }
-                        "Diary"
+                        {t!("section-diary")}
                     }
                     button {
                         class: tab_button_class(section == Section::Settings),
                         onclick: move |_| section_shell.go_to_settings(),
                         SettingsIcon { size: "22px" }
-                        "Settings"
+                        {t!("section-settings")}
                     }
                 }
             }
@@ -63,19 +64,19 @@ pub fn SectionShell() -> Element {
                   class: rail_button_class(section == Section::Notes),
                   onclick: move |_| section_shell.go_to_notes(),
                   Notebook { size: "21px" }
-                  "Notes"
+                  {t!("section-notes")}
               }
               button {
                   class: rail_button_class(section == Section::Diary),
                   onclick: move |_| section_shell.go_to_diary(),
                   Calendar { size: "21px" }
-                  "Diary"
+                  {t!("section-diary")}
               }
               button {
                   class: "{rail_button_class(section == Section::Settings)} mt-auto",
                   onclick: move |_| section_shell.go_to_settings(),
                   SettingsIcon { size: "21px" }
-                  "Settings"
+                  {t!("section-settings")}
               }
           }
           div {

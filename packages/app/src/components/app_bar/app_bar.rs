@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use ui::components::navbar::Navbar;
 
 #[derive(PartialEq, Clone, Props)]
@@ -18,7 +19,7 @@ pub fn AppBar(props: AppBarProps) -> Element {
           div { class: "flex items-center gap-2 text-lg font-medium text-[var(--secondary-color)]", {brand} }
           div {
               class: "flex min-w-0 flex-1 justify-center",
-              Navbar { aria_label: "Primary", {children} }
+              Navbar { aria_label: t!("nav-primary"), {children} }
           }
           div { class: "flex items-center gap-3", {actions} }
       }

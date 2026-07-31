@@ -1,5 +1,8 @@
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use serde::{Deserialize, Serialize};
+
+use super::language::Language;
 
 pub const ACCENT_SWATCHES: [&str; 6] = ["#9184d9", "#84a7d9", "#7db8a0", "#d99184", "#c9a24b", "#c58fd0"];
 
@@ -37,22 +40,17 @@ pub fn format_relative_time(updated_at_ms: i64) -> String {
   let elapsed_days = elapsed_ms / 86_400_000;
 
   if elapsed_minutes < 1 {
-    "Just now".to_string()
+    t!("time-just-now")
   } else if elapsed_minutes < 60 {
-    format!("{elapsed_minutes}m ago")
+    t!("time-minutes-ago", count: elapsed_minutes)
   } else if elapsed_hours < 24 {
-    format!("{elapsed_hours}h ago")
+    t!("time-hours-ago", count: elapsed_hours)
   } else if elapsed_days == 1 {
-    "Yesterday".to_string()
+    t!("time-yesterday")
   } else if elapsed_days < 7 {
-    format!("{elapsed_days} days ago")
+    t!("time-days-ago", count: elapsed_days)
   } else {
-    let elapsed_weeks = elapsed_days / 7;
-    if elapsed_weeks <= 1 {
-      "1 week ago".to_string()
-    } else {
-      format!("{elapsed_weeks} weeks ago")
-    }
+    t!("time-weeks-ago", count: (elapsed_days / 7).max(1))
   }
 }
 
@@ -142,6 +140,8 @@ pub struct PersistedState {
   pub theme: Theme,
   #[serde(default = "default_accent")]
   pub accent: String,
+  #[serde(default)]
+  pub language: Language,
   pub sync: SyncStatus,
   pub next_id: u32,
 }
@@ -159,6 +159,7 @@ pub struct NotesStore {
   search: Signal<String>,
   theme: Signal<Theme>,
   accent: Signal<String>,
+  language: Signal<Language>,
   sync: Signal<SyncStatus>,
   next_id: Signal<u32>,
 }
@@ -257,6 +258,7 @@ impl NotesStore {
       search: Signal::new(String::new()),
       theme: Signal::new(Theme::Dark),
       accent: Signal::new(ACCENT_SWATCHES[0].to_string()),
+      language: Signal::new(Language::default()),
       sync: Signal::new(SyncStatus::Synced),
       next_id: Signal::new(6),
     }
@@ -290,9 +292,9 @@ impl NotesStore {
 
   pub fn filter_title(&self) -> String {
     match self.filter() {
-      NoteFilter::All => "All Notes".to_string(),
-      NoteFilter::Starred => "Starred".to_string(),
-      NoteFilter::Pinned => "Pinned".to_string(),
+      NoteFilter::All => t!("filter-all-notes"),
+      NoteFilter::Starred => t!("filter-starred"),
+      NoteFilter::Pinned => t!("filter-pinned"),
       NoteFilter::Tag(tag_id) => self
         .tag_name(&tag_id)
         .map(|name| format!("#{name}"))
@@ -316,6 +318,10 @@ impl NotesStore {
 
   pub fn accent(&self) -> String {
     (self.accent)()
+  }
+
+  pub fn language(&self) -> Language {
+    (self.language)()
   }
 
   pub fn sync(&self) -> SyncStatus {
@@ -397,6 +403,10 @@ impl NotesStore {
     self.accent.set(accent);
   }
 
+  pub fn set_language(&mut self, language: Language) {
+    self.language.set(language);
+  }
+
   pub fn toggle_sync(&mut self) {
     let next = match self.sync() {
       SyncStatus::Synced => SyncStatus::Offline,
@@ -413,7 +423,7 @@ impl NotesStore {
       0,
       Note {
         id: id.clone(),
-        title: "Untitled note".into(),
+        title: String::new(),
         content: String::new(),
         folder_id,
         tag_ids,
@@ -591,6 +601,7 @@ impl NotesStore {
       tags: (self.tags)(),
       theme: self.theme(),
       accent: self.accent(),
+      language: self.language(),
       sync: self.sync(),
       next_id: (self.next_id)(),
     }
@@ -602,6 +613,7 @@ impl NotesStore {
     self.tags.set(state.tags);
     self.theme.set(state.theme);
     self.accent.set(state.accent);
+    self.language.set(state.language);
     self.sync.set(state.sync);
     self.next_id.set(state.next_id);
   }

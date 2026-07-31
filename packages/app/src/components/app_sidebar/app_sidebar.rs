@@ -1,6 +1,7 @@
 use super::use_app_sidebar::use_app_sidebar;
 use crate::state::{FolderIcon, NoteFilter, SyncStatus};
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{
   Archive, Bookmark, BookOpen, Briefcase, Calendar, Camera, CirclePlus, CloudCheck, CloudOff,
   Code, Gift, Globe, Heart, House, Inbox, Layers, Lock, Music, Notebook, Palette, Pin, Rocket,
@@ -56,48 +57,50 @@ pub fn AppSidebar() -> Element {
 
   rsx! {
       Sidebar {
+          label: t!("sidebar-label"),
+          description: t!("sidebar-description"),
           SidebarContent { class: "gap-0 p-2",
               Button {
                   variant: ButtonVariant::Primary,
                   class: "w-full justify-start gap-2 border border-[var(--accent)] bg-transparent text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]",
                   onclick: move |_| sidebar.create_note(),
                   CirclePlus { size: "16px" }
-                  "New note"
+                  {t!("action-new-note")}
               }
               div { class: "mt-3 flex flex-col gap-1",
                   div {
                       class: nav_row_class(all_active),
                       onclick: move |_| sidebar.select_filter(NoteFilter::All),
                       Layers { size: "16px" }
-                      span { class: "flex-1", "All Notes" }
+                      span { class: "flex-1", {t!("filter-all-notes")} }
                       span { class: "text-xs opacity-60", "{sidebar.store.note_count()}" }
                   }
                   div {
                       class: nav_row_class(starred_active),
                       onclick: move |_| sidebar.select_filter(NoteFilter::Starred),
                       Star { size: "16px" }
-                      span { class: "flex-1", "Starred" }
+                      span { class: "flex-1", {t!("filter-starred")} }
                       span { class: "text-xs opacity-60", "{sidebar.store.starred_count()}" }
                   }
                   div {
                       class: nav_row_class(pinned_active),
                       onclick: move |_| sidebar.select_filter(NoteFilter::Pinned),
                       Pin { size: "16px" }
-                      span { class: "flex-1", "Pinned" }
+                      span { class: "flex-1", {t!("filter-pinned")} }
                       span { class: "text-xs opacity-60", "{sidebar.store.pinned_count()}" }
                   }
               }
               SidebarGroup { class: "px-0",
                   div { class: "flex items-center justify-between px-2",
-                      SidebarGroupLabel { "Folders" }
+                      SidebarGroupLabel { {t!("folders-title")} }
                       button {
                           class: if is_mobile() { "flex items-center gap-1 text-xs text-[var(--accent)]" } else { "flex items-center text-[var(--accent)]" },
-                          "aria-label": "Manage folders",
-                          title: "Manage folders",
+                          "aria-label": t!("folders-manage-title"),
+                          title: t!("folders-manage-title"),
                           onclick: move |_| sidebar.open_folders_manager(),
                           SlidersHorizontal { size: "13px" }
                           if is_mobile() {
-                              "Manage"
+                              {t!("action-manage")}
                           }
                       }
                   }
@@ -123,15 +126,15 @@ pub fn AppSidebar() -> Element {
               }
               SidebarGroup { class: "px-0",
                   div { class: "flex items-center justify-between px-2",
-                      SidebarGroupLabel { "Tags" }
+                      SidebarGroupLabel { {t!("tags-title")} }
                       button {
                           class: if is_mobile() { "flex items-center gap-1 text-xs text-[var(--accent)]" } else { "flex items-center text-[var(--accent)]" },
-                          "aria-label": "Manage tags",
-                          title: "Manage tags",
+                          "aria-label": t!("tags-manage-title"),
+                          title: t!("tags-manage-title"),
                           onclick: move |_| sidebar.open_tags_manager(),
                           SlidersHorizontal { size: "13px" }
                           if is_mobile() {
-                              "Manage"
+                              {t!("action-manage")}
                           }
                       }
                   }
@@ -163,14 +166,14 @@ pub fn AppSidebar() -> Element {
           SidebarFooter { class: "gap-1 border-t border-[var(--primary-color-6)] pt-2",
               div {
                   class: "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-[var(--secondary-color-5)] hover:bg-[var(--primary-color-4)]",
-                  title: "Click to toggle offline",
+                  title: t!("sync-toggle-hint"),
                   onclick: move |_| sidebar.toggle_sync(),
                   if sync == SyncStatus::Synced {
                       CloudCheck { size: "15px" }
-                      "All changes saved"
+                      {t!("sync-saved")}
                   } else {
                       CloudOff { size: "15px" }
-                      "Offline — saved locally"
+                      {t!("sync-offline")}
                   }
               }
           }

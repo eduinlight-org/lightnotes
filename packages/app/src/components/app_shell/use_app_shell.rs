@@ -1,8 +1,9 @@
-use crate::state::use_synced_notes;
+use crate::state::{use_app_i18n, use_synced_notes};
 use dioxus::prelude::*;
 
 pub fn use_app_shell() {
   let store = use_synced_notes();
+  use_app_i18n(store);
 
   use_effect(move || {
     let theme_attr = store.theme().as_str();

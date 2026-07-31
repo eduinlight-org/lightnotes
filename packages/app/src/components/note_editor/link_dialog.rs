@@ -1,5 +1,6 @@
 use super::use_note_editor::NoteEditorState;
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 use ui::components::dialog::{Dialog, DialogDescription, DialogTitle};
 use ui::components::input::Input;
@@ -18,19 +19,19 @@ pub(super) fn LinkDialog(props: LinkDialogProps) -> Element {
       open: (editor.link_dialog_open)(),
       on_open_change: move |value| editor.link_dialog_open.set(value),
       class: "w-[min(90vw,26rem)] flex flex-col gap-3",
-      DialogTitle { class: "text-[var(--secondary-color)] font-medium!", "Add link" }
-      DialogDescription { class: "sr-only", "Enter link text and a URL" }
+      DialogTitle { class: "text-[var(--secondary-color)] font-medium!", {t!("link-dialog-title")} }
+      DialogDescription { class: "sr-only", {t!("link-dialog-description")} }
       label { class: "flex flex-col gap-1 text-xs text-[var(--secondary-color-5)]",
-        "Text"
+        {t!("link-dialog-text")}
         Input {
           class: "border border-[var(--primary-color-6)] bg-[var(--primary-color-1)] text-sm text-[var(--secondary-color)]",
-          placeholder: "Link text",
+          placeholder: t!("link-dialog-text-placeholder"),
           value: (editor.link_text_draft)(),
           oninput: move |event: FormEvent| editor.link_text_draft.set(event.value()),
         }
       }
       label { class: "flex flex-col gap-1 text-xs text-[var(--secondary-color-5)]",
-        "URL"
+        {t!("link-dialog-url")}
         Input {
           class: "border border-[var(--primary-color-6)] bg-[var(--primary-color-1)] text-sm text-[var(--secondary-color)]",
           placeholder: "https://…",
@@ -48,13 +49,13 @@ pub(super) fn LinkDialog(props: LinkDialogProps) -> Element {
           variant: ButtonVariant::Secondary,
           size: ButtonSize::Sm,
           onclick: move |_| editor.close_link_dialog(),
-          "Cancel"
+          {t!("action-cancel")}
         }
         Button {
           variant: ButtonVariant::Primary,
           size: ButtonSize::Sm,
           onclick: move |_| editor.submit_link_dialog(),
-          "Add link"
+          {t!("link-dialog-submit")}
         }
       }
     }

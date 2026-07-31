@@ -60,37 +60,6 @@ pub fn days_in_month(y: i32, m: u32) -> u32 {
   (next_month_first - this_month_first) as u32
 }
 
-pub fn month_name(m: u32) -> &'static str {
-  match m {
-    1 => "January",
-    2 => "February",
-    3 => "March",
-    4 => "April",
-    5 => "May",
-    6 => "June",
-    7 => "July",
-    8 => "August",
-    9 => "September",
-    10 => "October",
-    11 => "November",
-    12 => "December",
-    _ => "",
-  }
-}
-
-pub fn weekday_name(index: u32) -> &'static str {
-  match index {
-    0 => "Mon",
-    1 => "Tue",
-    2 => "Wed",
-    3 => "Thu",
-    4 => "Fri",
-    5 => "Sat",
-    6 => "Sun",
-    _ => "",
-  }
-}
-
 pub fn date_ms_to_date_string(ms: i64) -> String {
   let (y, m, d) = civil_from_days(day_key(ms));
   format!("{y:04}-{m:02}-{d:02}")

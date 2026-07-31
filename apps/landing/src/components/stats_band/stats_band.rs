@@ -1,29 +1,30 @@
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 
 const STATS: [(&str, &str); 4] = [
-  ("3", "Platforms, one codebase"),
-  ("100%", "Offline capable"),
-  ("0", "Third-party clouds"),
-  ("SQLite", "On-device storage"),
+  ("stats-platforms-value", "stats-platforms-label"),
+  ("stats-offline-value", "stats-offline-label"),
+  ("stats-clouds-value", "stats-clouds-label"),
+  ("stats-storage-value", "stats-storage-label"),
 ];
 
 #[component]
 pub fn StatsBand() -> Element {
   rsx! {
       section {
-          "aria-label": "LightNotes at a glance",
-          class: "mt-16 bg-white/[0.03] py-14 sm:mt-24",
+          "aria-label": t!("stats-label"),
+          class: "stats-band mt-24 py-16",
           div {
-              class: "mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-10 px-6 sm:grid-cols-4",
-              for (value, label) in STATS {
+              class: "wrap grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-6 gap-y-10",
+              for (value_key , label_key) in STATS {
                   div {
                       p {
-                          class: "text-[clamp(2.125rem,3.4vw,3.125rem)] font-medium leading-tight text-white tabular-nums",
-                          "{value}"
+                          class: "-ml-[0.05em] font-heading text-[clamp(34px,3.4vw,50px)] font-medium leading-[1.1] tabular-nums",
+                          {t!(value_key)}
                       }
                       p {
-                          class: "mt-3 text-xs uppercase tracking-wider text-white/65",
-                          "{label}"
+                          class: "mt-3 text-[13px] uppercase tracking-[0.06em] text-copy-soft",
+                          {t!(label_key)}
                       }
                   }
               }

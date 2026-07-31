@@ -1,7 +1,8 @@
 use super::use_diary_calendar::{use_diary_calendar, DayCell};
 use crate::components::{ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
-use crate::state::{date_math, CalendarViewMode};
+use crate::state::{i18n, CalendarViewMode};
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{BellRing, CalendarDays, ChevronLeft, ChevronRight};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 use ui::components::popover::ContentAlign;
@@ -43,18 +44,18 @@ pub fn DiaryCalendar() -> Element {
           on_open_change: move |value| calendar.set_calendar_open(value),
           ResponsivePopoverTrigger {
               class: TRIGGER_BUTTON_CLASS,
-              title: "Calendar",
+              title: t!("calendar-title"),
               CalendarDays { size: "15px" }
           }
           ResponsivePopoverContent {
-              title: "Calendar",
+              title: t!("calendar-title"),
               align: ContentAlign::End,
               class: "w-44 items-stretch gap-0 p-2 text-left",
               div { class: "flex items-center gap-1",
                   Button {
                       variant: ButtonVariant::Ghost,
                       size: ButtonSize::IconSm,
-                      "aria-label": "Previous",
+                      "aria-label": t!("action-previous"),
                       onclick: move |_| calendar.step(-1),
                       ChevronLeft { size: "15px" }
                   }
@@ -62,7 +63,7 @@ pub fn DiaryCalendar() -> Element {
                   Button {
                       variant: ButtonVariant::Ghost,
                       size: ButtonSize::IconSm,
-                      "aria-label": "Next",
+                      "aria-label": t!("action-next"),
                       onclick: move |_| calendar.step(1),
                       ChevronRight { size: "15px" }
                   }
@@ -91,7 +92,7 @@ pub fn DiaryCalendar() -> Element {
               } else {
                   div { class: "mt-2 grid grid-cols-7 gap-0.5",
                       for i in 0..7u32 {
-                          span { key: "{i}", class: "text-center text-[8px] uppercase tracking-wider opacity-55", "{&date_math::weekday_name(i)[..1]}" }
+                          span { key: "{i}", class: "text-center text-[8px] uppercase tracking-wider opacity-55", {i18n::weekday_narrow_name(i)} }
                       }
                   }
                   div { class: "mt-0.5 grid grid-cols-7 gap-0.5",
@@ -115,9 +116,9 @@ pub fn DiaryCalendar() -> Element {
                   }
               }
               div { class: "mt-2 flex gap-0.5 rounded-lg bg-[color-mix(in_srgb,var(--secondary-color)_6%,transparent)] p-0.5",
-                  button { class: segmented_class(view_mode == CalendarViewMode::Day, mobile), onclick: move |_| calendar.set_view(CalendarViewMode::Day), "Day" }
-                  button { class: segmented_class(view_mode == CalendarViewMode::Week, mobile), onclick: move |_| calendar.set_view(CalendarViewMode::Week), "Week" }
-                  button { class: segmented_class(view_mode == CalendarViewMode::Month, mobile), onclick: move |_| calendar.set_view(CalendarViewMode::Month), "Month" }
+                  button { class: segmented_class(view_mode == CalendarViewMode::Day, mobile), onclick: move |_| calendar.set_view(CalendarViewMode::Day), {t!("calendar-day")} }
+                  button { class: segmented_class(view_mode == CalendarViewMode::Week, mobile), onclick: move |_| calendar.set_view(CalendarViewMode::Week), {t!("calendar-week")} }
+                  button { class: segmented_class(view_mode == CalendarViewMode::Month, mobile), onclick: move |_| calendar.set_view(CalendarViewMode::Month), {t!("calendar-month")} }
               }
           }
       }

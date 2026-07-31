@@ -1,6 +1,7 @@
 use crate::state::{use_diary_ui, use_notes};
 use crate::Route;
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{Feather, Plus};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 
@@ -12,8 +13,8 @@ pub fn Diary() -> Element {
   rsx! {
       section { class: "flex h-full w-full flex-col items-center justify-center gap-4 px-6 py-24 text-center",
           Feather { size: "48px", stroke: "var(--accent)" }
-          h1 { class: "text-2xl font-medium text-[var(--secondary-color)]", "No note selected" }
-          p { class: "max-w-sm text-[var(--secondary-color-5)]", "Pick a day on the calendar, or write something new." }
+          h1 { class: "text-2xl font-medium text-[var(--secondary-color)]", {t!("diary-empty-title")} }
+          p { class: "max-w-sm text-[var(--secondary-color-5)]", {t!("diary-empty-description")} }
           Button {
               variant: ButtonVariant::Primary,
               size: ButtonSize::Lg,
@@ -25,7 +26,7 @@ pub fn Diary() -> Element {
                   navigator().push(Route::DiaryEntry { note_id });
               },
               Plus { size: "16px" }
-              "New note"
+              {t!("action-new-note")}
           }
       }
   }

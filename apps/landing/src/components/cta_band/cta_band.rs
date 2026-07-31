@@ -1,6 +1,5 @@
-use crate::theme::{OUTLINED_BUTTON_CLASS, PRIMARY_BUTTON_CLASS};
 use dioxus::prelude::*;
-use ui::components::button::{Button, ButtonSize, ButtonVariant};
+use dioxus_i18n::t;
 
 const GITHUB_URL: &str = "https://github.com/eduinlight/lightnotes";
 const WEB_APP_URL: &str = "https://lightnotes.eduindev.com";
@@ -9,28 +8,20 @@ const WEB_APP_URL: &str = "https://lightnotes.eduindev.com";
 pub fn CtaBand() -> Element {
   rsx! {
       section {
-          class: "mx-auto max-w-6xl px-6 py-16 sm:py-20",
-          hr { class: "mb-16 h-px border-0 bg-white/10" }
+          class: "wrap pt-16 pb-[88px]",
+          hr { class: "rule mb-16" }
           h2 {
-              class: "max-w-[22ch] text-[clamp(1.75rem,3vw,2.375rem)] font-medium leading-tight tracking-tight text-white",
-              "Keep your notes. Keep your server."
+              class: "max-w-[22ch] text-[clamp(28px,3vw,38px)] leading-[1.14]",
+              {t!("cta-title")}
           }
           p {
-              class: "mt-6 max-w-[56ch] leading-relaxed text-white/80",
-              "LightNotes is MIT licensed and open source. Clone it, build it for your platform, and point it at your own API."
+              class: "mt-[22px] max-w-[56ch] text-[16px] leading-[1.68] text-copy",
+              {t!("cta-description")}
           }
           div {
               class: "mt-7 flex flex-wrap gap-3",
-              a {
-                  href: GITHUB_URL,
-                  class: "no-underline",
-                  Button { variant: ButtonVariant::Primary, size: ButtonSize::Lg, class: PRIMARY_BUTTON_CLASS, "View on GitHub" }
-              }
-              a {
-                  href: WEB_APP_URL,
-                  class: "no-underline",
-                  Button { variant: ButtonVariant::Ghost, size: ButtonSize::Lg, class: OUTLINED_BUTTON_CLASS, "lightnotes.eduindev.com" }
-              }
+              a { class: "btn btn-primary btn-lg", href: GITHUB_URL, {t!("cta-view-on-github")} }
+              a { class: "btn btn-ghost btn-lg", href: WEB_APP_URL, "lightnotes.eduindev.com" }
           }
       }
   }

@@ -2,6 +2,7 @@ use super::use_diary_entry_list::use_diary_entry_list;
 use crate::components::{DiaryCalendar, ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
 use crate::Route;
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{BellRing, Feather, Funnel, Plus};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 use ui::components::popover::ContentAlign;
@@ -37,7 +38,7 @@ pub fn DiaryEntryList() -> Element {
   let entries = list.entries(active_note_id.as_deref());
   let is_mobile = list.is_mobile;
   let has_filter = list.filter_folder().is_some() || list.filter_tag().is_some();
-  let count_label = if entries.len() == 1 { "1 note".to_string() } else { format!("{} notes", entries.len()) };
+  let count_label = t!("notes-count", count: entries.len() as i64);
   let sub_label = format!("{count_label} \u{b7} {}", list.filter_summary());
 
   rsx! {
@@ -52,24 +53,24 @@ pub fn DiaryEntryList() -> Element {
               on_open_change: move |value| list.set_filter_open(value),
               ResponsivePopoverTrigger {
                   class: if has_filter { TRIGGER_BUTTON_ACTIVE_CLASS } else { TRIGGER_BUTTON_CLASS },
-                  title: "Filter by folder or tag",
+                  title: t!("diary-filter-trigger"),
                   Funnel { size: "15px" }
               }
               ResponsivePopoverContent {
-                  title: "Filter",
+                  title: t!("diary-filter-title"),
                   align: ContentAlign::End,
                   class: "w-56 items-stretch gap-1 p-1.5 text-left",
                   if has_filter {
                       div {
                           class: "flex cursor-pointer items-center justify-end px-2 py-1 text-xs text-[var(--accent)]",
                           onclick: move |_| list.clear_filters(),
-                          "Clear"
+                          {t!("action-clear")}
                       }
                   }
                   div {
                       class: filter_row_class(list.filter_folder().is_none()),
                       onclick: move |_| list.set_filter_folder(None),
-                      "All folders"
+                      {t!("diary-all-folders")}
                   }
                   for folder in list.folders() {
                       {
@@ -89,7 +90,7 @@ pub fn DiaryEntryList() -> Element {
                   div {
                       class: filter_row_class(list.filter_tag().is_none()),
                       onclick: move |_| list.set_filter_tag(None),
-                      "All tags"
+                      {t!("diary-all-tags")}
                   }
                   for tag in list.tags() {
                       {
@@ -111,7 +112,7 @@ pub fn DiaryEntryList() -> Element {
               variant: ButtonVariant::Primary,
               size: ButtonSize::IconSm,
               class: "border border-[var(--accent)] bg-transparent text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]",
-              "aria-label": "New note",
+              "aria-label": t!("action-new-note"),
               onclick: move |_| list.create_entry(),
               Plus { size: "16px" }
           }
@@ -120,7 +121,7 @@ pub fn DiaryEntryList() -> Element {
           if entries.is_empty() {
               div { class: "flex flex-col items-center gap-2 py-10 text-center text-[color-mix(in_srgb,var(--secondary-color)_55%,transparent)]",
                   Feather { size: "30px", class: "opacity-50" }
-                  div { class: "text-sm", "Nothing written here yet." }
+                  div { class: "text-sm", {t!("diary-nothing-written")} }
               }
           }
           for entry in entries {
@@ -158,7 +159,7 @@ pub fn DiaryEntryList() -> Element {
                                   }
                               }
                               p { class: snippet_class,
-                                  if entry.snippet.is_empty() { "Empty note" } else { "{entry.snippet}" }
+                                  if entry.snippet.is_empty() { {t!("diary-empty-note")} } else { "{entry.snippet}" }
                               }
                           }
                       }

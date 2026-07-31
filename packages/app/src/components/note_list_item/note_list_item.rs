@@ -1,6 +1,7 @@
 use super::use_note_list_item::use_note_list_item;
 use crate::state::{format_relative_time, Note};
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{BellRing, Pin, Star};
 
 fn snippet(markdown: &str) -> String {
@@ -68,12 +69,12 @@ pub fn NoteListItem(props: NoteListItemProps) -> Element {
           onclick: move |_| item.open(&note_id),
           div { class: "flex items-start gap-2",
               div { class: title_class,
-                  if note.title.is_empty() { "Untitled" } else { "{note.title}" }
+                  if note.title.is_empty() { {t!("notes-untitled")} } else { "{note.title}" }
               }
               div { class: icon_gap_class,
                   button {
                       class: "flex items-center p-0",
-                      "aria-label": if note.starred { "Remove from Starred" } else { "Add to Starred" },
+                      "aria-label": if note.starred { t!("note-remove-from-starred") } else { t!("note-add-to-starred") },
                       onclick: move |event: MouseEvent| {
                           event.stop_propagation();
                           item.toggle_star(&star_note_id);
@@ -86,7 +87,7 @@ pub fn NoteListItem(props: NoteListItemProps) -> Element {
                   }
                   button {
                       class: "flex items-center p-0",
-                      "aria-label": if note.pinned { "Unpin from top" } else { "Pin to top of list" },
+                      "aria-label": if note.pinned { t!("note-unpin-from-top") } else { t!("note-pin-to-top") },
                       onclick: move |event: MouseEvent| {
                           event.stop_propagation();
                           item.toggle_pin(&pin_note_id);
@@ -100,7 +101,7 @@ pub fn NoteListItem(props: NoteListItemProps) -> Element {
               }
           }
           p { class: snippet_class,
-              if snippet_text.is_empty() { "No additional text" } else { "{snippet_text}" }
+              if snippet_text.is_empty() { {t!("notes-no-additional-text")} } else { "{snippet_text}" }
           }
           div { class: footer_class,
               if note.remind_before_hours.is_some() {

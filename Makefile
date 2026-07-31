@@ -30,6 +30,29 @@ app-ios-build:
 app-desktop-build:
 	dx build --package desktop --platform desktop --release
 
+landing-bundle:
+	dx bundle --package landing --platform web --fullstack true --release
+
+app-web-bundle:
+	dx bundle --package web --platform web --fullstack true --release
+
+app-macos-bundle:
+	dx bundle --package desktop --platform macos --release --package-types macos --package-types dmg
+
+app-windows-bundle:
+	dx bundle --package desktop --platform windows --release --package-types msi --package-types nsis
+
+app-linux-bundle:
+	dx bundle --package desktop --platform linux --release --package-types appimage --package-types deb --package-types rpm
+
+app-android-bundle:
+	dx bundle --package light-notes-mobile --platform android --release --package-types apk --package-types aab
+
+app-ios-bundle:
+	dx bundle --package light-notes-mobile --platform ios --release --package-types ipa
+
+app-bundle-all: app-web-bundle app-macos-bundle app-windows-bundle app-linux-bundle app-android-bundle app-ios-bundle
+
 api-dev:
 	cargo run -p api
 

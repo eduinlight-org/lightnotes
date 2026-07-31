@@ -2,6 +2,7 @@ use super::use_diary_shell::use_diary_shell;
 use crate::components::DiaryEntryList;
 use crate::Route;
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 
 #[component]
 pub fn DiaryShell() -> Element {
@@ -17,7 +18,7 @@ pub fn DiaryShell() -> Element {
             } else {
                 div { class: "flex h-full min-h-0 flex-col overflow-hidden",
                     div { class: "flex flex-none items-center p-3",
-                        div { class: "flex-1 text-lg font-medium text-[var(--secondary-color)]", "Diary" }
+                        div { class: "flex-1 text-lg font-medium text-[var(--secondary-color)]", {t!("diary-title")} }
                     }
                     DiaryEntryList {}
                 }

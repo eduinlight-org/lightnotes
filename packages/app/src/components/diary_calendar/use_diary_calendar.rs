@@ -1,4 +1,4 @@
-use crate::state::{date_math, now_ms, use_diary_ui, use_notes, CalendarViewMode, DiaryUiState, Note, NotesStore};
+use crate::state::{date_math, i18n, now_ms, use_diary_ui, use_notes, CalendarViewMode, DiaryUiState, Note, NotesStore};
 use dioxus::prelude::*;
 use ui::components::sidebar::use_is_mobile;
 
@@ -73,7 +73,7 @@ impl DiaryCalendarState {
     DayCell {
       day_key: days,
       label: day.to_string(),
-      dow_label: date_math::weekday_name(date_math::weekday_index(days)).to_string(),
+      dow_label: i18n::weekday_short_name(date_math::weekday_index(days)),
       in_current_month,
       is_selected: days == cursor_days,
       is_today: days == today_days,
@@ -114,7 +114,7 @@ impl DiaryCalendarState {
     let (year, month, day, _, _) = date_math::date_ms_to_ymdhm(self.cursor_date_ms());
 
     match self.view_mode() {
-      CalendarViewMode::Month => format!("{} {year}", date_math::month_name(month)),
+      CalendarViewMode::Month => format!("{} {year}", i18n::month_name(month)),
       CalendarViewMode::Week => {
         let cursor_days = date_math::day_key(self.cursor_date_ms());
         let week_start_days = cursor_days - date_math::weekday_index(cursor_days) as i64;
@@ -123,11 +123,11 @@ impl DiaryCalendarState {
         let (end_year, end_month, end_day) = date_math::civil_from_days(week_end_days);
         format!(
           "{start_day} {} \u{2013} {end_day} {} {end_year}",
-          &date_math::month_name(start_month)[..3],
-          &date_math::month_name(end_month)[..3]
+          i18n::month_short_name(start_month),
+          i18n::month_short_name(end_month)
         )
       }
-      CalendarViewMode::Day => format!("{day} {} {year}", date_math::month_name(month)),
+      CalendarViewMode::Day => format!("{day} {} {year}", i18n::month_name(month)),
     }
   }
 

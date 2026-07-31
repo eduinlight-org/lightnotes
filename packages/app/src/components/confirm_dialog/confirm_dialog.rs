@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use ui::components::alert_dialog::{
   AlertDialog, AlertDialogAction, AlertDialogActions, AlertDialogCancel, AlertDialogDescription,
   AlertDialogTitle,
@@ -27,8 +28,8 @@ pub fn ConfirmDialog(props: ConfirmDialogProps) -> Element {
           }
           AlertDialogDescription { {description} }
           AlertDialogActions {
-              AlertDialogCancel { "Cancel" }
-              AlertDialogAction { on_click: on_confirm, "Delete" }
+              AlertDialogCancel { {t!("action-cancel")} }
+              AlertDialogAction { on_click: on_confirm, {t!("action-delete")} }
           }
       }
   }

@@ -31,6 +31,9 @@ pub use folder_manager_dialog::{FolderManagerDialog, FolderManagerPanel};
 mod folder_picker;
 pub use folder_picker::FolderPicker;
 
+mod language_picker;
+pub use language_picker::LanguagePicker;
+
 mod login_button;
 pub use login_button::LoginButton;
 

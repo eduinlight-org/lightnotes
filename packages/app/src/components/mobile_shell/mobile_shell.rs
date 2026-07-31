@@ -2,6 +2,7 @@ use super::use_mobile_shell::use_mobile_shell;
 use crate::components::{NoteListItem, SearchInput, SearchInputSize};
 use crate::Route;
 use dioxus::prelude::*;
+use dioxus_i18n::t;
 use dioxus_icons::lucide::{CirclePlus, Inbox, Search};
 use ui::components::sidebar::SidebarTrigger;
 
@@ -24,10 +25,10 @@ pub fn MobileShell() -> Element {
   rsx! {
       div { class: "relative flex h-full min-h-0 flex-col overflow-hidden",
           div { class: "flex flex-none items-center gap-3 p-3",
-              SidebarTrigger {}
+              SidebarTrigger { label: t!("sidebar-toggle") }
               div { class: "min-w-0 flex-1 truncate text-lg font-medium text-[var(--secondary-color)]", "{title}" }
               button {
-                  "aria-label": "New note",
+                  "aria-label": t!("action-new-note"),
                   onclick: move |_| mobile_shell.create_note(),
                   CirclePlus { size: "22px", stroke: "var(--accent)" }
               }
@@ -48,10 +49,10 @@ pub fn MobileShell() -> Element {
                           Inbox { size: "40px", class: "opacity-40" }
                       }
                       div { class: "text-base font-medium text-[var(--secondary-color)]",
-                          if has_search { "No matches" } else { "No notes yet" }
+                          if has_search { {t!("notes-empty-no-matches")} } else { {t!("notes-empty-no-notes")} }
                       }
                       p { class: "text-sm",
-                          if has_search { "Try a different search term." } else { "Create your first note in this view." }
+                          if has_search { {t!("notes-empty-search-hint")} } else { {t!("notes-empty-hint")} }
                       }
                   }
               }
