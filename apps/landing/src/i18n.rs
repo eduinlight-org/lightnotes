@@ -76,7 +76,11 @@ pub fn use_landing_i18n(lang: &str) -> Language {
       if stored == language {
         return;
       }
-      let _ = document::eval(&format!("window.location.replace('/?lang={}');", stored.code())).await;
+      let _ = document::eval(&format!(
+        "window.location.replace(window.location.pathname + '?lang={}' + window.location.hash);",
+        stored.code()
+      ))
+      .await;
     });
   });
 

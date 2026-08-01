@@ -46,7 +46,7 @@ app-linux-bundle:
 	dx bundle --package desktop --platform linux --release --package-types appimage --package-types deb --package-types rpm
 
 app-android-bundle:
-	dx bundle --package light-notes-mobile --platform android --release --package-types apk --package-types aab
+	./scripts/android-bundle.sh
 
 app-ios-bundle:
 	dx bundle --package light-notes-mobile --platform ios --release --package-types ipa

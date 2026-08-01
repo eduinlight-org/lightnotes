@@ -30,7 +30,8 @@ impl LanguageSelectorState {
     let code = language.code();
     spawn(async move {
       let _ = document::eval(&format!(
-        "localStorage.setItem('{STORAGE_KEY}', '{code}'); window.location.assign('/?lang={code}');"
+        "localStorage.setItem('{STORAGE_KEY}', '{code}');
+         window.location.assign(window.location.pathname + '?lang={code}' + window.location.hash);"
       ))
       .await;
     });
