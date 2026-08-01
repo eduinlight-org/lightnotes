@@ -13,6 +13,18 @@ members = [
     "apps/api",
     "apps/landing",
 ]
+default-members = [
+    "packages/ui",
+    "packages/app",
+    "packages/editor",
+    "packages/sync-dto",
+    "packages/api-sdk",
+    "packages/store-sdk",
+    "apps/web",
+    "apps/desktop",
+    "apps/api",
+    "apps/landing",
+]
 
 [workspace.dependencies]
 dioxus = { version = "0.7.1" }

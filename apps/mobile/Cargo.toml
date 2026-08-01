@@ -3,6 +3,10 @@ name = "light-notes-mobile"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "light-notes"
+path = "src/main.rs"
+
 [dependencies]
 dioxus = { workspace = true, features = ["router", "fullstack"] }
 app = { workspace = true }

@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MANIFEST="$ROOT/apps/mobile/Dioxus.toml"
 ICONS="$ROOT/apps/mobile/icons/android"
-PROJECT="$ROOT/target/dx/light-notes-mobile/release/android/app"
+PROJECT="$ROOT/target/dx/light-notes/release/android/app"
 OUTPUTS="$PROJECT/app/build/outputs"
 
 "$ROOT/scripts/android-icons.sh" "$ICONS" "$PROJECT/app/src/main/res" --clean
