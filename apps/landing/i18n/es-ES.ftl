@@ -13,7 +13,7 @@ language-en = English
 language-es = Español
 
 hero-title-line-1 = Notas que viven primero
-hero-title-line-2 = en tu propia máquina.
+hero-title-line-2 = en tu propia máquina
 hero-description = LightNotes es una aplicación de notas local-first: un editor Markdown completo, carpetas, etiquetas y un calendario de diario, guardados en tu dispositivo y sincronizados con una API que tú mismo alojas. Un solo código en Rust, hecho con Dioxus, que llega a web, escritorio y móvil.
 hero-clone-repo = Clona el repositorio
 hero-try-web-app = Prueba la app web

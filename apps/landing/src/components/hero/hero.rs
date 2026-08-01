@@ -14,7 +14,7 @@ pub fn Hero() -> Element {
           div {
               class: "max-w-[780px]",
               h1 {
-                  class: "-ml-[0.06em] text-[clamp(44px,6.2vw,84px)] leading-[1.06] tracking-[-0.02em]",
+                  class: "-ml-[0.06em] text-[clamp(36px,5vw,60px)] leading-[1.06] tracking-[-0.02em]",
                   span { class: "block", {t!("hero-title-line-1")} }
                   span { class: "block", {t!("hero-title-line-2")} }
               }

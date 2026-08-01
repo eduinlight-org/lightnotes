@@ -13,7 +13,7 @@ language-en = English
 language-es = Español
 
 hero-title-line-1 = Notes that live on
-hero-title-line-2 = your machine first.
+hero-title-line-2 = your machine first
 hero-description = LightNotes is a local-first notes app: a rich Markdown editor, folders, tags and a diary calendar, stored on your device and synced through an API you host yourself. One Rust codebase, built with Dioxus, shipping to web, desktop and mobile.
 hero-clone-repo = Clone the repo
 hero-try-web-app = Try the web app
