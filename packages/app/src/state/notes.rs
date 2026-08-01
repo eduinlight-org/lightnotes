@@ -165,102 +165,18 @@ pub struct NotesStore {
 }
 
 impl NotesStore {
-  pub fn seed() -> Self {
-    let now = now_ms();
-    const HOUR_MS: i64 = 3_600_000;
-    const DAY_MS: i64 = 86_400_000;
-
-    let folders = vec![
-      Folder { id: "folder-1".into(), name: "Personal".into(), icon: FolderIcon::User, updated_at_ms: now, order: 1 },
-      Folder { id: "folder-2".into(), name: "Work".into(), icon: FolderIcon::Briefcase, updated_at_ms: now, order: 2 },
-      Folder { id: "folder-3".into(), name: "Ideas".into(), icon: FolderIcon::Inbox, updated_at_ms: now, order: 3 },
-    ];
-
-    let tags = vec![
-      Tag { id: "tag-1".into(), name: "todo".into(), updated_at_ms: now, order: 1 },
-      Tag { id: "tag-2".into(), name: "recipe".into(), updated_at_ms: now, order: 2 },
-      Tag { id: "tag-3".into(), name: "journal".into(), updated_at_ms: now, order: 3 },
-    ];
-
-    let notes = vec![
-      Note {
-        id: "note-1".into(),
-        title: "Welcome to LightNotes".into(),
-        content: "# Welcome\n\nThis is your first note. Try **Markdown** formatting, add tags, and organize notes into folders.\n\n- Write freely\n- Use the toolbar for formatting\n- Search from the top bar\n\n## Getting started\n- [x] Read this note\n- [ ] Create your first note\n- [ ] Star your favorite\n\n> Local-first: everything is saved on this device.".into(),
-        folder_id: Some("folder-3".into()),
-        tag_ids: vec!["tag-3".into()],
-        pinned: true,
-        starred: true,
-        updated_at_ms: now - 2 * HOUR_MS,
-        order: 100,
-        date_ms: now - 2 * HOUR_MS,
-        remind_before_hours: None,
-      },
-      Note {
-        id: "note-2".into(),
-        title: "Grocery list".into(),
-        content: "## Groceries\n\n- Milk\n- Eggs\n- Sourdough bread\n- Coffee".into(),
-        folder_id: Some("folder-1".into()),
-        tag_ids: vec!["tag-1".into()],
-        pinned: false,
-        starred: false,
-        updated_at_ms: now - DAY_MS,
-        order: 90,
-        date_ms: now - DAY_MS,
-        remind_before_hours: Some(1),
-      },
-      Note {
-        id: "note-3".into(),
-        title: "Sourdough recipe".into(),
-        content: "# Sourdough Bread\n\n1. Mix flour and water\n2. Add starter\n3. Fold every 30 minutes\n4. Bake at 230C for 40 minutes".into(),
-        folder_id: Some("folder-1".into()),
-        tag_ids: vec!["tag-2".into()],
-        pinned: false,
-        starred: false,
-        updated_at_ms: now - 2 * DAY_MS,
-        order: 80,
-        date_ms: now - 2 * DAY_MS,
-        remind_before_hours: None,
-      },
-      Note {
-        id: "note-4".into(),
-        title: "Q3 roadmap notes".into(),
-        content: "# Q3 Roadmap\n\n- Ship offline storage\n- Draft cloud sync design\n- Review onboarding flow".into(),
-        folder_id: Some("folder-2".into()),
-        tag_ids: vec!["tag-1".into()],
-        pinned: true,
-        starred: false,
-        updated_at_ms: now - 3 * DAY_MS,
-        order: 70,
-        date_ms: now + DAY_MS,
-        remind_before_hours: Some(24),
-      },
-      Note {
-        id: "note-5".into(),
-        title: "Morning pages".into(),
-        content: "Started the day with a walk. Feeling good about the new notes app design.".into(),
-        folder_id: None,
-        tag_ids: vec!["tag-3".into()],
-        pinned: false,
-        starred: false,
-        updated_at_ms: now - 7 * DAY_MS,
-        order: 60,
-        date_ms: now - 7 * DAY_MS,
-        remind_before_hours: None,
-      },
-    ];
-
+  pub fn empty() -> Self {
     Self {
-      notes: Signal::new(notes),
-      folders: Signal::new(folders),
-      tags: Signal::new(tags),
+      notes: Signal::new(Vec::new()),
+      folders: Signal::new(Vec::new()),
+      tags: Signal::new(Vec::new()),
       filter: Signal::new(NoteFilter::All),
       search: Signal::new(String::new()),
       theme: Signal::new(Theme::Dark),
       accent: Signal::new(ACCENT_SWATCHES[0].to_string()),
       language: Signal::new(Language::default()),
       sync: Signal::new(SyncStatus::Synced),
-      next_id: Signal::new(6),
+      next_id: Signal::new(1),
     }
   }
 

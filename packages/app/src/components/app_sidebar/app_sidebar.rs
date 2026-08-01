@@ -105,6 +105,9 @@ pub fn AppSidebar() -> Element {
                       }
                   }
                   div { class: "flex flex-col gap-1",
+                      if sidebar.store.folders().is_empty() {
+                          p { class: "px-2 py-2 text-xs text-[var(--secondary-color-5)]", {t!("folders-empty")} }
+                      }
                       for folder in sidebar.store.folders() {
                           {
                               let folder_id = folder.id.clone();
@@ -139,6 +142,9 @@ pub fn AppSidebar() -> Element {
                       }
                   }
                   div { class: "flex flex-wrap gap-1.5 px-2",
+                      if sidebar.store.tags().is_empty() {
+                          p { class: "py-2 text-xs text-[var(--secondary-color-5)]", {t!("tags-empty")} }
+                      }
                       for tag in sidebar.store.tags() {
                           {
                               let tag_id = tag.id.clone();

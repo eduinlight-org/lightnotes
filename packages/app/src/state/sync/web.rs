@@ -17,7 +17,7 @@ fn device_id() -> String {
 }
 
 pub fn use_synced_notes() -> NotesStore {
-  let mut store = use_context_provider(NotesStore::seed);
+  let mut store = use_context_provider(NotesStore::empty);
   use_persisted_preferences(store);
 
   let api = use_hook(|| Arc::new(ApiClient::new(api_base_url())));

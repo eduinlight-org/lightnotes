@@ -22,7 +22,7 @@ async fn apply_outbound(handle: StoreHandle, changes: Vec<QueuedChange>) {
 }
 
 pub fn use_synced_notes() -> NotesStore {
-  let mut store = use_context_provider(NotesStore::seed);
+  let mut store = use_context_provider(NotesStore::empty);
   use_persisted_preferences(store);
 
   let mut offline = use_signal(|| false);
@@ -31,7 +31,7 @@ pub fn use_synced_notes() -> NotesStore {
   });
 
   let handle = use_synced_store(StoreConfig::new(api_base_url()), offline);
-  let mut loaded = use_signal(|| false);
+  let mut hydrated = use_signal(|| false);
   let mut device_id = use_signal(String::new);
   let mut last_synced_notes = use_signal(Vec::<Note>::new);
   let mut last_synced_folders = use_signal(Vec::<Folder>::new);
@@ -51,20 +51,20 @@ pub fn use_synced_notes() -> NotesStore {
       let folders: Vec<Folder> = local_snapshot.folders.into_iter().map(folder_from_dto).collect();
       let tags: Vec<Tag> = local_snapshot.tags.into_iter().map(tag_from_dto).collect();
 
-      if !(notes.is_empty() && folders.is_empty() && tags.is_empty()) {
-        let next_id = compute_next_id(&notes, &folders, &tags);
-        let mut persisted = store.snapshot();
-        persisted.notes = notes;
-        persisted.folders = folders;
-        persisted.tags = tags;
-        persisted.next_id = next_id;
-        store.restore(persisted);
+      let next_id = compute_next_id(&notes, &folders, &tags);
+      let mut persisted = store.snapshot();
+      persisted.notes = notes;
+      persisted.folders = folders;
+      persisted.tags = tags;
+      persisted.next_id = next_id;
+      store.restore(persisted);
 
-        let baseline = store.snapshot();
-        last_synced_notes.set(baseline.notes);
-        last_synced_folders.set(baseline.folders);
-        last_synced_tags.set(baseline.tags);
-      }
+      let baseline = store.snapshot();
+      last_synced_notes.set(baseline.notes);
+      last_synced_folders.set(baseline.folders);
+      last_synced_tags.set(baseline.tags);
+
+      hydrated.set(true);
     });
   });
 
@@ -118,22 +118,6 @@ pub fn use_synced_notes() -> NotesStore {
             SseChangeEvent::CaughtUp { cursor } => {
               since = since.max(cursor);
               stream_handle.set_cursor(since).await;
-
-              if !*loaded.peek() {
-                let baseline = store.snapshot();
-
-                if baseline.notes.is_empty() && baseline.folders.is_empty() && baseline.tags.is_empty() {
-                  last_synced_notes.set(Vec::new());
-                  last_synced_folders.set(Vec::new());
-                  last_synced_tags.set(Vec::new());
-                } else {
-                  last_synced_notes.set(baseline.notes);
-                  last_synced_folders.set(baseline.folders);
-                  last_synced_tags.set(baseline.tags);
-                }
-
-                loaded.set(true);
-              }
             }
           }
         }
@@ -145,10 +129,10 @@ pub fn use_synced_notes() -> NotesStore {
   });
 
   use_effect(move || {
-    let is_loaded = loaded();
+    let is_hydrated = hydrated();
     let _ = store.snapshot();
 
-    if !is_loaded {
+    if !is_hydrated {
       return;
     }
 

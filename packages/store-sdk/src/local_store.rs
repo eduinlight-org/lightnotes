@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use dioxus::logger::tracing::error;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{ConnectOptions, Row, SqlitePool};
 use sync_dto::{ChangeOp, ChangePayload, EntityKind, FolderDto, FolderIconDto, NoteDto, QueuedChange, TagDto};
@@ -22,17 +23,29 @@ pub struct LocalSnapshot {
 }
 
 impl LocalStore {
-  pub async fn connect(db_path: &Path) -> Self {
+  pub async fn try_connect(db_path: &Path) -> Option<Self> {
     if let Some(parent) = db_path.parent() {
-      std::fs::create_dir_all(parent).expect("failed to create local store directory");
+      if let Err(err) = std::fs::create_dir_all(parent) {
+        error!("local store unavailable: cannot create directory {}: {err}", parent.display());
+        return None;
+      }
     }
 
     let options = SqliteConnectOptions::new().filename(db_path).create_if_missing(true).disable_statement_logging();
-    let pool = SqlitePoolOptions::new().connect_with(options).await.expect("failed to open local sqlite store");
+    let pool = match SqlitePoolOptions::new().connect_with(options).await {
+      Ok(pool) => pool,
+      Err(err) => {
+        error!("local store unavailable: cannot open sqlite at {}: {err}", db_path.display());
+        return None;
+      }
+    };
 
-    sqlx::migrate!("./migrations").run(&pool).await.expect("failed to run local store migrations");
+    if let Err(err) = sqlx::migrate!("./migrations").run(&pool).await {
+      error!("local store unavailable: migrations failed at {}: {err}", db_path.display());
+      return None;
+    }
 
-    Self { pool }
+    Some(Self { pool })
   }
 
   pub async fn load_snapshot(&self) -> LocalSnapshot {
@@ -283,5 +296,82 @@ impl LocalStore {
     .expect("failed to get or create device_id");
 
     row.get("device_id")
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use sync_dto::NoteDto;
+
+  fn note_change(id: &str, title: &str, updated_at_ms: i64) -> QueuedChange {
+    QueuedChange {
+      change_id: format!("change-{id}-{updated_at_ms}"),
+      device_id: "device-test".into(),
+      entity: EntityKind::Note,
+      entity_id: id.into(),
+      op: ChangeOp::Create,
+      payload: Some(ChangePayload::Note(NoteDto {
+        id: id.into(),
+        title: title.into(),
+        content: "body".into(),
+        folder_id: None,
+        tag_ids: Vec::new(),
+        pinned: false,
+        starred: false,
+        updated_at_ms,
+        order: 1,
+        date_ms: updated_at_ms,
+        remind_before_hours: None,
+      })),
+      client_updated_at_ms: updated_at_ms,
+      enqueued_at_ms: updated_at_ms,
+    }
+  }
+
+  #[tokio::test]
+  async fn applied_notes_survive_reopening_the_database() {
+    let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
+    let db_path = dir.join("nested").join("lightnotes.db");
+
+    let store = LocalStore::try_connect(&db_path).await.expect("first connect");
+    store.apply(&note_change("note-1", "offline note", 1_000)).await;
+    assert_eq!(store.load_snapshot().await.notes.len(), 1);
+    drop(store);
+
+    let reopened = LocalStore::try_connect(&db_path).await.expect("second connect");
+    let snapshot = reopened.load_snapshot().await;
+
+    assert_eq!(snapshot.notes.len(), 1);
+    assert_eq!(snapshot.notes[0].title, "offline note");
+
+    std::fs::remove_dir_all(&dir).ok();
+  }
+
+  #[tokio::test]
+  async fn enqueued_changes_survive_reopening_the_database() {
+    let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
+    let db_path = dir.join("lightnotes.db");
+
+    let store = LocalStore::try_connect(&db_path).await.expect("first connect");
+    store.enqueue_outbound(&note_change("note-1", "offline note", 1_000)).await;
+    drop(store);
+
+    let reopened = LocalStore::try_connect(&db_path).await.expect("second connect");
+    let (row_id, change) = reopened.peek_front_outbound().await.expect("queued change survived");
+
+    assert_eq!(change.entity_id, "note-1");
+
+    reopened.dequeue_front_outbound(row_id).await;
+    assert!(reopened.peek_front_outbound().await.is_none());
+
+    std::fs::remove_dir_all(&dir).ok();
+  }
+
+  #[tokio::test]
+  async fn unwritable_path_returns_none_instead_of_panicking() {
+    let db_path = Path::new("/dev/null/lightnotes/lightnotes.db");
+
+    assert!(LocalStore::try_connect(db_path).await.is_none());
   }
 }
