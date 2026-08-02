@@ -1,4 +1,4 @@
-use crate::state::{use_notes, NotesStore};
+use crate::state::{use_boot, use_notes, NotesStore};
 use crate::Route;
 use dioxus::prelude::*;
 
@@ -6,6 +6,7 @@ use dioxus::prelude::*;
 pub struct MobileShellState {
   pub store: NotesStore,
   pub full_page: bool,
+  pub ready: bool,
 }
 
 impl MobileShellState {
@@ -17,8 +18,9 @@ impl MobileShellState {
 
 pub fn use_mobile_shell() -> MobileShellState {
   let store = use_notes();
+  let ready = (use_boot().store_ready)();
   let route = use_route::<Route>();
   let full_page = matches!(route, Route::NoteEditor { .. } | Route::TagsScreen { .. } | Route::FoldersScreen { .. });
 
-  MobileShellState { store, full_page }
+  MobileShellState { store, full_page, ready }
 }

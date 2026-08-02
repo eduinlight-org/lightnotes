@@ -27,6 +27,12 @@ pub fn SectionShell() -> Element {
   let section = section_shell.section;
   let hide_chrome = section_shell.hide_chrome;
 
+  if !section_shell.viewport_ready {
+    return rsx! {
+        div { class: "h-full w-full" }
+    };
+  }
+
   if is_mobile() {
     return rsx! {
         div { class: "flex h-full flex-col overflow-hidden",

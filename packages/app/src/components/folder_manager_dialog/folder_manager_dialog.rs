@@ -1,5 +1,5 @@
 use super::use_folder_manager_dialog::{use_folder_manager_dialog, use_folder_manager_panel};
-use crate::components::{ConfirmDialog, ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
+use crate::components::{ConfirmDialog, ManagerPanelSkeleton, ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
 use crate::state::FolderIcon;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
@@ -109,6 +109,13 @@ pub struct FolderManagerPanelProps {
 pub fn FolderManagerPanel(props: FolderManagerPanelProps) -> Element {
   let FolderManagerPanelProps { on_select } = props;
   let mut panel = use_folder_manager_panel(on_select);
+
+  if !panel.ready {
+    return rsx! {
+        ManagerPanelSkeleton {}
+    };
+  }
+
   let mut store = panel.store;
   let mut draft = panel.draft;
   let mut draft_icon = panel.draft_icon;

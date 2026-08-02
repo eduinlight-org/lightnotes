@@ -1,5 +1,5 @@
 use super::use_tag_manager_dialog::{use_tag_manager_dialog, use_tag_manager_panel};
-use crate::components::ConfirmDialog;
+use crate::components::{ConfirmDialog, ManagerPanelSkeleton};
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 use dioxus_icons::lucide::{Tag as TagIcon, Trash2, X};
@@ -16,6 +16,13 @@ pub struct TagManagerPanelProps {
 pub fn TagManagerPanel(props: TagManagerPanelProps) -> Element {
   let TagManagerPanelProps { on_select } = props;
   let mut panel = use_tag_manager_panel(on_select);
+
+  if !panel.ready {
+    return rsx! {
+        ManagerPanelSkeleton {}
+    };
+  }
+
   let store = panel.store;
   let mut draft = panel.draft;
   let is_mobile = panel.is_mobile;

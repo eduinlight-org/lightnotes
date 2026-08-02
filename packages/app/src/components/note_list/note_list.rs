@@ -1,5 +1,5 @@
 use super::use_note_list::use_note_list;
-use crate::components::{NoteListItem, SearchInput};
+use crate::components::{NoteListItem, NoteListSkeleton, SearchInput};
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 use dioxus_icons::lucide::{Inbox, Plus, Search};
@@ -9,6 +9,13 @@ use ui::components::sidebar::SidebarTrigger;
 #[component]
 pub fn NoteList() -> Element {
   let (mut note_list, active_note_id) = use_note_list();
+
+  if !note_list.ready {
+    return rsx! {
+        NoteListSkeleton {}
+    };
+  }
+
   let mut store = note_list.store;
 
   let search = store.search();

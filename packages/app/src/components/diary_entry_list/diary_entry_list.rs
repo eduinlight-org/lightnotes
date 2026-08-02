@@ -1,5 +1,5 @@
 use super::use_diary_entry_list::use_diary_entry_list;
-use crate::components::{DiaryCalendar, ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
+use crate::components::{DiaryCalendar, DiaryListSkeleton, ResponsivePopoverContent, ResponsivePopoverRoot, ResponsivePopoverTrigger};
 use crate::Route;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
@@ -31,7 +31,15 @@ fn filter_row_class(active: bool) -> &'static str {
 #[component]
 pub fn DiaryEntryList() -> Element {
   let mut list = use_diary_entry_list();
-  let active_note_id = match use_route::<Route>() {
+  let route = use_route::<Route>();
+
+  if !list.ready {
+    return rsx! {
+        DiaryListSkeleton {}
+    };
+  }
+
+  let active_note_id = match route {
     Route::DiaryEntry { note_id } => Some(note_id),
     _ => None,
   };

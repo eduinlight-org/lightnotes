@@ -1,3 +1,4 @@
+use crate::state::use_boot;
 use crate::Route;
 use dioxus::prelude::*;
 use ui::components::sidebar::use_is_mobile;
@@ -22,6 +23,7 @@ pub struct SectionShellState {
   pub is_mobile: Signal<bool>,
   pub section: Section,
   pub hide_chrome: bool,
+  pub viewport_ready: bool,
 }
 
 impl SectionShellState {
@@ -40,9 +42,10 @@ impl SectionShellState {
 
 pub fn use_section_shell() -> SectionShellState {
   let is_mobile = use_is_mobile();
+  let viewport_ready = (use_boot().viewport_ready)();
   let route = use_route::<Route>();
   let section = section_of(&route);
   let hide_chrome = matches!(route, Route::NoteEditor { .. });
 
-  SectionShellState { is_mobile, section, hide_chrome }
+  SectionShellState { is_mobile, section, hide_chrome, viewport_ready }
 }

@@ -4,8 +4,21 @@ use dioxus::prelude::*;
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
+#[allow(dead_code)]
+fn stylesheets() -> Vec<String> {
+  vec![
+    ui::THEME_CSS.to_string(),
+    MAIN_CSS.to_string(),
+    TAILWIND_CSS.to_string(),
+  ]
+}
+
 fn main() {
-  dioxus::launch(App);
+  dioxus::LaunchBuilder::new()
+    .with_cfg(desktop!(dioxus::desktop::Config::new()
+      .with_custom_index(app::boot::custom_index(&stylesheets()))
+      .with_background_color(app::boot::SPLASH_BACKGROUND_RGBA)))
+    .launch(App);
 }
 
 #[component]

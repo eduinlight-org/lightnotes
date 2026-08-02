@@ -1,8 +1,9 @@
-use crate::state::{use_notes, NotesStore, Theme};
+use crate::state::{use_boot, use_notes, NotesStore, Theme};
 
 #[derive(Clone, Copy)]
 pub struct SettingsPanelState {
   pub store: NotesStore,
+  pub ready: bool,
 }
 
 impl SettingsPanelState {
@@ -20,5 +21,8 @@ impl SettingsPanelState {
 }
 
 pub fn use_settings_panel() -> SettingsPanelState {
-  SettingsPanelState { store: use_notes() }
+  SettingsPanelState {
+    store: use_notes(),
+    ready: use_boot().ready(),
+  }
 }

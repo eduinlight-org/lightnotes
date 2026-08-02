@@ -2,6 +2,8 @@
 
 use dioxus::prelude::*;
 
+pub mod boot;
+
 mod components;
 use components::{AppShell, DiaryShell, NotesShell, SectionShell};
 

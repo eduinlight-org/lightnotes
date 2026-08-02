@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use futures_util::StreamExt;
 
 use super::dto::{api_base_url, diff_folders, diff_notes, diff_tags, merge_server_changes};
+use crate::state::boot::use_boot;
 use crate::state::notes::{Folder, Note, NotesStore, SyncStatus, Tag};
 use crate::state::preferences::use_persisted_preferences;
 
@@ -22,7 +23,7 @@ pub fn use_synced_notes() -> NotesStore {
 
   let api = use_hook(|| Arc::new(ApiClient::new(api_base_url())));
   let device = use_hook(device_id);
-  let mut loaded = use_signal(|| false);
+  let mut loaded = use_boot().store_ready;
   let mut last_synced_notes = use_signal(Vec::<Note>::new);
   let mut last_synced_folders = use_signal(Vec::<Folder>::new);
   let mut last_synced_tags = use_signal(Vec::<Tag>::new);

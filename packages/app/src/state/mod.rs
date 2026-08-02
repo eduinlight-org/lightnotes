@@ -1,3 +1,6 @@
+mod boot;
+pub use boot::{use_boot, BootState};
+
 mod notes;
 pub use notes::{
   format_relative_time, now_ms, Folder, FolderIcon, Note, NoteFilter, NotesStore, SyncStatus, Tag, Theme, ACCENT_SWATCHES, REMIND_CHOICES,

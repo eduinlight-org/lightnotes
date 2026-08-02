@@ -5,7 +5,7 @@ use crate::components::sheet::{
 };
 use crate::components::skeleton::Skeleton;
 use crate::components::tooltip::{Tooltip, TooltipContent, TooltipTrigger};
-use dioxus::core::use_drop;
+use dioxus::core::{spawn_forever, use_drop};
 use dioxus::prelude::*;
 use dioxus_icons::lucide::PanelLeft;
 use dioxus_primitives::dioxus_attributes::attributes;
@@ -131,11 +131,30 @@ pub fn use_sidebar() -> SidebarCtx {
     use_context::<SidebarCtx>()
 }
 
-pub fn use_is_mobile() -> Signal<bool> {
-    let mut is_mobile = use_signal(|| false);
+#[derive(Clone, Copy)]
+struct ViewportCtx {
+    is_mobile: Signal<bool>,
+    resolved: Signal<bool>,
+    watching: Signal<bool>,
+}
+
+fn use_viewport() -> ViewportCtx {
+    let ctx = use_root_context(|| ViewportCtx {
+        is_mobile: Signal::new_in_scope(false, ScopeId::ROOT),
+        resolved: Signal::new_in_scope(false, ScopeId::ROOT),
+        watching: Signal::new_in_scope(false, ScopeId::ROOT),
+    });
 
     use_effect(move || {
-        spawn(async move {
+        let mut watching = ctx.watching;
+        if *watching.peek() {
+            return;
+        }
+        watching.set(true);
+
+        let mut is_mobile = ctx.is_mobile;
+        let mut resolved = ctx.resolved;
+        spawn_forever(async move {
             let js_code = format!(
                 r#"
                 function checkMobile() {{
@@ -153,20 +172,20 @@ pub fn use_is_mobile() -> Signal<bool> {
 
             while let Ok(result) = eval.recv::<bool>().await {
                 is_mobile.set(result);
+                resolved.set(true);
             }
         });
     });
 
-    use_drop(|| {
-        _ = document::eval(
-            r#"
-            window.removeEventListener('resize', window.__sidebarResizeHandler);
-            delete window.__sidebarResizeHandler;
-            "#,
-        );
-    });
+    ctx
+}
 
-    is_mobile
+pub fn use_is_mobile() -> Signal<bool> {
+    use_viewport().is_mobile
+}
+
+pub fn use_viewport_resolved() -> Signal<bool> {
+    use_viewport().resolved
 }
 
 #[component]

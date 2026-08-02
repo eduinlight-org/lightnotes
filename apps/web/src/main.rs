@@ -2,8 +2,14 @@ use app::Route;
 use dioxus::prelude::*;
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
-const MAIN_CSS: Asset = asset!("/assets/main.css");
-const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
+const MAIN_CSS: Asset = asset!(
+  "/assets/main.css",
+  AssetOptions::css().with_static_head(true)
+);
+const TAILWIND_CSS: Asset = asset!(
+  "/assets/tailwind.css",
+  AssetOptions::css().with_static_head(true)
+);
 
 fn main() {
   dioxus::launch(App);

@@ -1,4 +1,4 @@
-use crate::state::{date_math, i18n, now_ms, use_diary_ui, use_notes, CalendarViewMode, DiaryUiState, Folder, Note, NotesStore, Tag};
+use crate::state::{date_math, i18n, now_ms, use_boot, use_diary_ui, use_notes, CalendarViewMode, DiaryUiState, Folder, Note, NotesStore, Tag};
 use crate::Route;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
@@ -30,6 +30,7 @@ pub struct DiaryEntryListState {
   pub store: NotesStore,
   pub diary_ui: DiaryUiState,
   pub is_mobile: Signal<bool>,
+  pub ready: bool,
 }
 
 impl DiaryEntryListState {
@@ -214,5 +215,10 @@ impl DiaryEntryListState {
 }
 
 pub fn use_diary_entry_list() -> DiaryEntryListState {
-  DiaryEntryListState { store: use_notes(), diary_ui: use_diary_ui(), is_mobile: use_is_mobile() }
+  DiaryEntryListState {
+    store: use_notes(),
+    diary_ui: use_diary_ui(),
+    is_mobile: use_is_mobile(),
+    ready: (use_boot().store_ready)(),
+  }
 }

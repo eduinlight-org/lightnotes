@@ -8,4 +8,4 @@ pub mod components;
 
 /// Theme variables consumed by every component in [`components`]. Link this once in each
 /// platform's document head.
-pub const THEME_CSS: Asset = asset!("/assets/dx-components-theme.css");
+pub const THEME_CSS: Asset = asset!("/assets/dx-components-theme.css", AssetOptions::css().with_static_head(true));

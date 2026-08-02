@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{app_title}</title>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="color-scheme" content="dark light" />
+    <script>(function () {
+  var theme = 'dark';
+  var accent = '#9184d9';
+
+  try {
+    var raw = localStorage.getItem('lightnotes:prefs:v1');
+    if (raw) {
+      var prefs = JSON.parse(raw);
+      if (prefs.theme === 'Light') {
+        theme = 'light';
+      }
+      if (typeof prefs.accent === 'string' && prefs.accent.length > 0) {
+        accent = prefs.accent;
+      }
+    }
+  } catch (error) {
+    theme = 'dark';
+  }
+
+  var root = document.documentElement;
+  root.setAttribute('data-theme', theme);
+  root.style.setProperty('--accent', accent);
+})();
+</script>
+    {style_include}
+    <style>html {
+  background-color: #161826;
+}
+
+html[data-theme='light'] {
+  background-color: #eceefb;
+}
+
+body {
+  margin: 0;
+}
+
+#app-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background-color: #161826;
+  color: #e9e9ed;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: opacity 200ms ease;
+}
+
+html[data-theme='light'] #app-splash {
+  background-color: #eceefb;
+  color: #26283a;
+}
+
+#app-splash[data-hidden] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#app-splash-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+#app-splash-mark svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: var(--accent, #9184d9);
+}
+
+#app-splash-bar {
+  width: 120px;
+  height: 3px;
+  border-radius: 999px;
+  overflow: hidden;
+  background-color: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+#app-splash-bar i {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--accent, #9184d9);
+  animation: app-splash-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes app-splash-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(300%);
+  }
+}
+</style>
+  </head>
+  <body>
+    <div id="main"></div>
+<div id="app-splash">
+  <div id="app-splash-mark">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 6h4" />
+      <path d="M2 10h4" />
+      <path d="M2 14h4" />
+      <path d="M2 18h4" />
+      <rect width="16" height="20" x="4" y="2" rx="2" />
+      <path d="M9.5 8h5" />
+      <path d="M9.5 12H16" />
+      <path d="M9.5 16H14" />
+    </svg>
+    <span>LightNotes</span>
+  </div>
+  <div id="app-splash-bar"><i></i></div>
+</div>
+  </body>
+</html>

@@ -11,5 +11,8 @@ icon = [
   "icons/android/mipmap-xxxhdpi/ic_launcher.png",
 ]
 
+[android.application]
+theme = "@style/Theme.AppCompat.NoActionBar"
+
 [ios]
 icon = ["icons/ios/AppIcon.appiconset/icon-1024.png"]

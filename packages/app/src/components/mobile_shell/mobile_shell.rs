@@ -1,5 +1,5 @@
 use super::use_mobile_shell::use_mobile_shell;
-use crate::components::{NoteListItem, SearchInput, SearchInputSize};
+use crate::components::{NoteListItem, NoteListSkeleton, SearchInput, SearchInputSize};
 use crate::Route;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
@@ -41,23 +41,27 @@ pub fn MobileShell() -> Element {
               }
           }
           div { class: "min-h-0 flex-1 overflow-y-auto px-3 pb-4",
-              if notes.is_empty() {
-                  div { class: "flex flex-col items-center gap-2 py-16 text-center text-[var(--secondary-color-5)]",
-                      if has_search {
-                          Search { size: "40px", class: "opacity-40" }
-                      } else {
-                          Inbox { size: "40px", class: "opacity-40" }
-                      }
-                      div { class: "text-base font-medium text-[var(--secondary-color)]",
-                          if has_search { {t!("notes-empty-no-matches")} } else { {t!("notes-empty-no-notes")} }
-                      }
-                      p { class: "text-sm",
-                          if has_search { {t!("notes-empty-search-hint")} } else { {t!("notes-empty-hint")} }
+              if !mobile_shell.ready {
+                  NoteListSkeleton { with_header: false }
+              } else {
+                  if notes.is_empty() {
+                      div { class: "flex flex-col items-center gap-2 py-16 text-center text-[var(--secondary-color-5)]",
+                          if has_search {
+                              Search { size: "40px", class: "opacity-40" }
+                          } else {
+                              Inbox { size: "40px", class: "opacity-40" }
+                          }
+                          div { class: "text-base font-medium text-[var(--secondary-color)]",
+                              if has_search { {t!("notes-empty-no-matches")} } else { {t!("notes-empty-no-notes")} }
+                          }
+                          p { class: "text-sm",
+                              if has_search { {t!("notes-empty-search-hint")} } else { {t!("notes-empty-hint")} }
+                          }
                       }
                   }
-              }
-              for note in notes {
-                  NoteListItem { key: "{note.id}", note, is_active: false }
+                  for note in notes {
+                      NoteListItem { key: "{note.id}", note, is_active: false }
+                  }
               }
           }
       }

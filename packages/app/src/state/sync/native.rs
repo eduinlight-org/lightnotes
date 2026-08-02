@@ -7,6 +7,7 @@ use store_sdk::{use_synced_store, StoreConfig, StoreHandle};
 use sync_dto::QueuedChange;
 
 use super::dto::{api_base_url, compute_next_id, diff_folders, diff_notes, diff_tags, folder_from_dto, merge_server_changes, note_from_dto, tag_from_dto};
+use crate::state::boot::use_boot;
 use crate::state::notes::{Folder, Note, NotesStore, SyncStatus, Tag};
 use crate::state::preferences::use_persisted_preferences;
 
@@ -31,7 +32,7 @@ pub fn use_synced_notes() -> NotesStore {
   });
 
   let handle = use_synced_store(StoreConfig::new(api_base_url()), offline);
-  let mut hydrated = use_signal(|| false);
+  let mut hydrated = use_boot().store_ready;
   let mut device_id = use_signal(String::new);
   let mut last_synced_notes = use_signal(Vec::<Note>::new);
   let mut last_synced_folders = use_signal(Vec::<Folder>::new);

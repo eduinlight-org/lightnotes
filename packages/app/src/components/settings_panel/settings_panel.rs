@@ -1,6 +1,6 @@
 use super::use_settings_panel::use_settings_panel;
 use super::SettingsSession;
-use crate::components::LanguagePicker;
+use crate::components::{LanguagePicker, SettingsSkeleton};
 use crate::state::{SyncStatus, Theme, ACCENT_SWATCHES};
 use dioxus::prelude::*;
 use dioxus_i18n::t;
@@ -18,6 +18,13 @@ fn theme_card_class(active: bool) -> &'static str {
 #[component]
 pub fn SettingsPanel() -> Element {
   let mut settings = use_settings_panel();
+
+  if !settings.ready {
+    return rsx! {
+        SettingsSkeleton {}
+    };
+  }
+
   let store = settings.store;
   let theme = store.theme();
   let accent = store.accent();

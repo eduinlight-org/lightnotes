@@ -1,4 +1,4 @@
-use crate::state::{use_notes, use_ui, FolderIcon, NoteFilter, NotesStore, UiState};
+use crate::state::{use_boot, use_notes, use_ui, FolderIcon, NoteFilter, NotesStore, UiState};
 use crate::Route;
 use dioxus::prelude::*;
 use ui::components::sidebar::use_is_mobile;
@@ -11,6 +11,7 @@ pub struct FolderManagerPanelState {
   pub is_mobile: Signal<bool>,
   pub on_select: Option<EventHandler<()>>,
   pub pending_delete: Signal<Option<String>>,
+  pub ready: bool,
 }
 
 impl FolderManagerPanelState {
@@ -53,6 +54,7 @@ pub fn use_folder_manager_panel(on_select: Option<EventHandler<()>>) -> FolderMa
     is_mobile: use_is_mobile(),
     on_select,
     pending_delete: use_signal(|| None),
+    ready: (use_boot().store_ready)(),
   }
 }
 

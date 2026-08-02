@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use super::boot::use_boot;
 use super::language::Language;
 use super::notes::{NotesStore, Theme};
 
@@ -15,7 +16,7 @@ struct Prefs {
 }
 
 pub fn use_persisted_preferences(mut store: NotesStore) {
-  let mut loaded = use_signal(|| false);
+  let mut loaded = use_boot().prefs_ready;
 
   use_effect(move || {
     spawn(async move {
