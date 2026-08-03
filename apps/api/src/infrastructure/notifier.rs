@@ -1,6 +1,6 @@
 use std::pin::Pin;
 
-use futures_util::{Stream, StreamExt};
+use futures_util::{future, Stream, StreamExt};
 use tokio::sync::broadcast;
 use tokio_stream::wrappers::BroadcastStream;
 
@@ -22,9 +22,15 @@ impl ChangeNotifier for BroadcastChangeNotifier {
     let _ = self.sender.send(change);
   }
 
-  fn subscribe(&self) -> Pin<Box<dyn Stream<Item = StoredChange> + Send>> {
+  fn subscribe(&self, user_id: &str) -> Pin<Box<dyn Stream<Item = StoredChange> + Send>> {
     let receiver = self.sender.subscribe();
-    let stream = BroadcastStream::new(receiver).filter_map(|item| async move { item.ok() });
+    let user_id = user_id.to_string();
+
+    let stream = BroadcastStream::new(receiver)
+      .take_while(|item| future::ready(item.is_ok()))
+      .filter_map(|item| async move { item.ok() })
+      .filter(move |change| future::ready(change.user_id == user_id));
+
     Box::pin(stream)
   }
 }

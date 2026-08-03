@@ -7,6 +7,7 @@ use store_sdk::{use_synced_store, StoreConfig, StoreHandle};
 use sync_dto::QueuedChange;
 
 use super::dto::{api_base_url, compute_next_id, diff_folders, diff_notes, diff_tags, folder_from_dto, merge_server_changes, note_from_dto, tag_from_dto};
+use crate::state::auth::{use_auth, AuthState};
 use crate::state::boot::use_boot;
 use crate::state::notes::{Folder, Note, NotesStore, SyncStatus, Tag};
 use crate::state::preferences::use_persisted_preferences;
@@ -22,9 +23,18 @@ async fn apply_outbound(handle: StoreHandle, changes: Vec<QueuedChange>) {
   }
 }
 
+fn persist_tokens(handle: &StoreHandle, mut auth: AuthState) {
+  if let Some(rotated) = handle.api().take_rotated_tokens() {
+    auth.set_tokens(rotated);
+  }
+}
+
 pub fn use_synced_notes() -> NotesStore {
   let mut store = use_context_provider(NotesStore::empty);
   use_persisted_preferences(store);
+
+  let auth = use_auth();
+  let boot = use_boot();
 
   let mut offline = use_signal(|| false);
   use_effect(move || {
@@ -32,20 +42,62 @@ pub fn use_synced_notes() -> NotesStore {
   });
 
   let handle = use_synced_store(StoreConfig::new(api_base_url()), offline);
-  let mut hydrated = use_boot().store_ready;
+  use_context_provider(|| handle.clone());
+
+  let mut hydrated = boot.store_ready;
+  let session_ready = boot.session_ready;
   let mut device_id = use_signal(String::new);
   let mut last_synced_notes = use_signal(Vec::<Note>::new);
   let mut last_synced_folders = use_signal(Vec::<Folder>::new);
   let mut last_synced_tags = use_signal(Vec::<Tag>::new);
   let mut sync_generation = use_signal(|| 0u64);
+  let mut stream_task = use_signal(|| None::<dioxus::core::Task>);
 
-  let hydrate_handle = handle.clone();
-  use_effect(move || {
-    let handle = hydrate_handle.clone();
-
+  let identity_handle = handle.clone();
+  use_hook(move || {
     spawn(async move {
-      let device = handle.device_id().await;
-      device_id.set(device);
+      device_id.set(identity_handle.device_id().await);
+    });
+  });
+
+  let reset_handle = handle.clone();
+  use_effect(move || {
+    if !session_ready() {
+      return;
+    }
+
+    let _auth_generation = auth.generation();
+    let signed_in = auth.is_signed_in();
+    let tokens = auth.tokens.peek().clone();
+    let user_id = auth.user.peek().as_ref().map(|user| user.id.clone());
+
+    if let Some(task) = stream_task.write().take() {
+      task.cancel();
+    }
+
+    *sync_generation.write() += 1;
+    hydrated.set(false);
+
+    store.clear_synced_entities();
+    last_synced_notes.set(Vec::new());
+    last_synced_folders.set(Vec::new());
+    last_synced_tags.set(Vec::new());
+
+    reset_handle.api().set_tokens(tokens);
+
+    let handle = reset_handle.clone();
+    let task = spawn(async move {
+      let stored_user = handle.load_session().await.map(|(id, _)| id);
+
+      let switched_account = match (&user_id, &stored_user) {
+        (Some(current), Some(previous)) => current != previous,
+        (None, Some(_)) => true,
+        _ => false,
+      };
+
+      if switched_account {
+        handle.clear_user_data().await;
+      }
 
       let local_snapshot = handle.load_snapshot().await;
       let notes: Vec<Note> = local_snapshot.notes.into_iter().map(note_from_dto).collect();
@@ -66,14 +118,13 @@ pub fn use_synced_notes() -> NotesStore {
       last_synced_tags.set(baseline.tags);
 
       hydrated.set(true);
-    });
-  });
 
-  let stream_handle = handle.clone();
-  use_hook(move || {
-    spawn(async move {
-      let device = stream_handle.device_id().await;
-      let mut since = stream_handle.cursor().await;
+      if !signed_in {
+        return;
+      }
+
+      let device = handle.device_id().await;
+      let mut since = handle.cursor().await;
       let mut backoff_ms = BASE_BACKOFF_MS;
 
       loop {
@@ -82,7 +133,7 @@ pub fn use_synced_notes() -> NotesStore {
           continue;
         }
 
-        let mut stream = stream_handle.subscribe_changes(since);
+        let mut stream = handle.subscribe_changes(since);
 
         while let Some(event) = stream.next().await {
           backoff_ms = BASE_BACKOFF_MS;
@@ -102,8 +153,8 @@ pub fn use_synced_notes() -> NotesStore {
                 client_updated_at_ms: change.server_applied_at_ms,
                 enqueued_at_ms: change.server_applied_at_ms,
               };
-              stream_handle.apply(&queued).await;
-              stream_handle.set_cursor(since).await;
+              handle.apply(&queued).await;
+              handle.set_cursor(since).await;
 
               if !is_self_echo {
                 let mut snapshot = store.snapshot();
@@ -118,22 +169,29 @@ pub fn use_synced_notes() -> NotesStore {
             }
             SseChangeEvent::CaughtUp { cursor } => {
               since = since.max(cursor);
-              stream_handle.set_cursor(since).await;
+              handle.set_cursor(since).await;
             }
           }
         }
+
+        drop(stream);
+        persist_tokens(&handle, auth);
 
         tokio::time::sleep(Duration::from_millis(backoff_ms)).await;
         backoff_ms = (backoff_ms * 2).min(MAX_BACKOFF_MS);
       }
     });
+
+    stream_task.set(Some(task));
   });
 
+  let outbound_handle = handle.clone();
   use_effect(move || {
     let is_hydrated = hydrated();
+    let is_signed_in = auth.is_signed_in();
     let _ = store.snapshot();
 
-    if !is_hydrated {
+    if !is_hydrated || !is_signed_in {
       return;
     }
 
@@ -143,7 +201,7 @@ pub fn use_synced_notes() -> NotesStore {
       *generation
     };
 
-    let handle = handle.clone();
+    let handle = outbound_handle.clone();
 
     spawn(async move {
       tokio::time::sleep(Duration::from_millis(OUTBOUND_DEBOUNCE_MS)).await;

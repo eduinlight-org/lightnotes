@@ -533,4 +533,11 @@ impl NotesStore {
     self.sync.set(state.sync);
     self.next_id.set(state.next_id);
   }
+
+  pub fn clear_synced_entities(&mut self) {
+    self.notes.set(Vec::new());
+    self.folders.set(Vec::new());
+    self.tags.set(Vec::new());
+    self.next_id.set(1);
+  }
 }

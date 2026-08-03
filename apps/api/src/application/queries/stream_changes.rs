@@ -6,6 +6,7 @@ use futures_util::stream::{self, Stream, StreamExt};
 use crate::domain::ports::{ChangeNotifier, ChangeRepository, RepositoryError, StoredChange};
 
 pub struct StreamChangesQuery {
+  pub user_id: String,
   pub since: i64,
 }
 
@@ -21,8 +22,8 @@ pub struct StreamChangesHandler {
 
 impl StreamChangesHandler {
   pub async fn handle(&self, query: StreamChangesQuery) -> Result<Pin<Box<dyn Stream<Item = StreamItem> + Send>>, RepositoryError> {
-    let live = self.notifier.subscribe();
-    let catch_up = self.change_repo.list_since(query.since).await?;
+    let live = self.notifier.subscribe(&query.user_id);
+    let catch_up = self.change_repo.list_since(&query.user_id, query.since).await?;
     let last_seq = catch_up.iter().map(|change| change.seq).max().unwrap_or(query.since);
 
     let catch_up_stream = stream::iter(catch_up.into_iter().map(|change| StreamItem::Change(Box::new(change))));

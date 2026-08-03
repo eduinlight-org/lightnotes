@@ -297,6 +297,50 @@ impl LocalStore {
 
     row.get("device_id")
   }
+
+  pub async fn load_session(&self) -> Option<(String, String)> {
+    sqlx::query("SELECT user_id, session_json FROM session WHERE id = 0")
+      .fetch_optional(&self.pool)
+      .await
+      .expect("failed to query session")
+      .map(|row| (row.get("user_id"), row.get("session_json")))
+  }
+
+  pub async fn save_session(&self, user_id: &str, session_json: &str, updated_at_ms: i64) {
+    sqlx::query(
+      "INSERT INTO session (id, user_id, session_json, updated_at_ms) VALUES (0, ?, ?, ?) \
+       ON CONFLICT(id) DO UPDATE SET user_id = excluded.user_id, session_json = excluded.session_json, updated_at_ms = excluded.updated_at_ms",
+    )
+    .bind(user_id)
+    .bind(session_json)
+    .bind(updated_at_ms)
+    .execute(&self.pool)
+    .await
+    .expect("failed to save session");
+  }
+
+  pub async fn clear_session(&self) {
+    sqlx::query("DELETE FROM session WHERE id = 0")
+      .execute(&self.pool)
+      .await
+      .expect("failed to clear session");
+  }
+
+  pub async fn clear_user_data(&self) {
+    for statement in [
+      "DELETE FROM notes",
+      "DELETE FROM folders",
+      "DELETE FROM tags",
+      "DELETE FROM outbound_queue",
+      "DELETE FROM applied_changes",
+      "DELETE FROM sync_cursor",
+    ] {
+      sqlx::query(statement)
+        .execute(&self.pool)
+        .await
+        .expect("failed to clear local user data");
+    }
+  }
 }
 
 #[cfg(test)]
@@ -364,6 +408,32 @@ mod tests {
 
     reopened.dequeue_front_outbound(row_id).await;
     assert!(reopened.peek_front_outbound().await.is_none());
+
+    std::fs::remove_dir_all(&dir).ok();
+  }
+
+  #[tokio::test]
+  async fn clearing_user_data_keeps_the_device_identity_and_session() {
+    let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
+    let db_path = dir.join("lightnotes.db");
+
+    let store = LocalStore::try_connect(&db_path).await.expect("connect");
+    store.apply(&note_change("note-1", "mine", 1_000)).await;
+    store.enqueue_outbound(&note_change("note-2", "queued", 2_000)).await;
+    store.set_cursor(42).await;
+    store.save_session("user-1", "{}", 1_000).await;
+    let device = store.device_id().await;
+
+    store.clear_user_data().await;
+
+    assert!(store.load_snapshot().await.notes.is_empty());
+    assert!(store.peek_front_outbound().await.is_none());
+    assert_eq!(store.cursor().await, 0);
+    assert_eq!(store.device_id().await, device);
+    assert_eq!(store.load_session().await.map(|(id, _)| id), Some("user-1".to_string()));
+
+    store.clear_session().await;
+    assert!(store.load_session().await.is_none());
 
     std::fs::remove_dir_all(&dir).ok();
   }

@@ -4,7 +4,7 @@ use crate::components::{LanguagePicker, SettingsSkeleton};
 use crate::state::{SyncStatus, Theme, ACCENT_SWATCHES};
 use dioxus::prelude::*;
 use dioxus_i18n::t;
-use dioxus_icons::lucide::{Check, CloudCheck, CloudOff, HardDrive, Moon, Notebook, Sun};
+use dioxus_icons::lucide::{Check, CloudCheck, CloudOff, HardDrive, Moon, Notebook, Sun, UserRound};
 use ui::components::button::{Button, ButtonSize, ButtonVariant};
 
 fn theme_card_class(active: bool) -> &'static str {
@@ -37,8 +37,35 @@ pub fn SettingsPanel() -> Element {
     SyncStatus::Offline => t!("sync-offline"),
   };
 
+  let signed_in = settings.auth.is_signed_in();
+  let account_name = settings.auth.display_name();
+  let account_email = settings.auth.user().map(|user| user.email).unwrap_or_default();
+
   rsx! {
       div { class: "flex flex-col gap-5",
+          SettingsSession { title: t!("settings-account"),
+              div { class: "flex items-center gap-3 rounded-lg bg-[var(--primary-color-3)] p-3",
+                  UserRound { size: "20px", stroke: "var(--secondary-color-5)" }
+                  div { class: "flex-1",
+                      if signed_in {
+                          div { class: "text-sm font-medium text-[var(--secondary-color)]", "{account_name}" }
+                          div { class: "text-xs text-[var(--secondary-color-5)]", "{account_email}" }
+                      } else {
+                          div { class: "text-sm font-medium text-[var(--secondary-color)]", {t!("auth-not-signed-in")} }
+                          div { class: "text-xs text-[var(--secondary-color-5)]", {t!("settings-account-description")} }
+                      }
+                  }
+                  if signed_in {
+                      Button {
+                          variant: ButtonVariant::Secondary,
+                          size: ButtonSize::Sm,
+                          class: "border border-[var(--primary-color-6)] bg-transparent hover:bg-[color-mix(in_srgb,var(--secondary-color)_5%,transparent)]",
+                          onclick: move |_| settings.sign_out(),
+                          {t!("action-sign-out")}
+                      }
+                  }
+              }
+          }
           SettingsSession { title: t!("settings-appearance"),
               div { class: "flex gap-2",
                   button {

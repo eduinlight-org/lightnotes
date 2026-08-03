@@ -135,3 +135,66 @@ pub struct PullChangesResponse {
 pub fn is_newer_or_equal(existing_updated_at_ms: Option<i64>, incoming_updated_at_ms: i64) -> bool {
   existing_updated_at_ms.is_none_or(|existing| incoming_updated_at_ms >= existing)
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserDto {
+  pub id: String,
+  pub email: String,
+  pub name: Option<String>,
+  pub picture: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuthTokensDto {
+  pub access_token: String,
+  pub refresh_token: String,
+  pub expires_in_secs: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuthConfigResponse {
+  pub google_client_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GoogleSignInRequest {
+  pub id_token: String,
+  pub device_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuthSessionResponse {
+  pub user: UserDto,
+  pub tokens: AuthTokensDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RefreshRequest {
+  pub refresh_token: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RefreshResponse {
+  pub tokens: AuthTokensDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SignOutRequest {
+  pub refresh_token: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CurrentUserResponse {
+  pub user: UserDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NativeAuthStartResponse {
+  pub ticket: String,
+  pub authorize_url: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NativeAuthPollRequest {
+  pub ticket: String,
+}

@@ -2,6 +2,7 @@ use std::convert::Infallible;
 use std::time::Duration;
 
 use axum::extract::{Query, State};
+use axum::http::StatusCode;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
 use futures_util::{Stream, StreamExt};
@@ -14,6 +15,7 @@ use crate::application::queries::stream_changes::{StreamChangesQuery, StreamItem
 use crate::domain::change::Change;
 use crate::domain::ports::StoredChange;
 
+use super::auth_user::AuthUser;
 use super::state::AppState;
 
 fn now_ms() -> i64 {
@@ -23,8 +25,9 @@ fn now_ms() -> i64 {
     .as_millis() as i64
 }
 
-fn to_domain_change(queued: QueuedChange) -> Change {
+fn to_domain_change(user_id: &str, queued: QueuedChange) -> Change {
   Change {
+    user_id: user_id.to_string(),
     change_id: queued.change_id,
     device_id: queued.device_id,
     entity: queued.entity,
@@ -35,8 +38,12 @@ fn to_domain_change(queued: QueuedChange) -> Change {
   }
 }
 
-pub async fn push(State(state): State<AppState>, Json(request): Json<PushChangesRequest>) -> Json<PushChangesResponse> {
-  let changes = request.changes.into_iter().map(to_domain_change).collect();
+pub async fn push(State(state): State<AppState>, user: AuthUser, Json(request): Json<PushChangesRequest>) -> Json<PushChangesResponse> {
+  let changes = request
+    .changes
+    .into_iter()
+    .map(|queued| to_domain_change(&user.user_id, queued))
+    .collect();
   let outcome = state.push_handler.handle(PushChangesCommand { changes }, now_ms()).await;
 
   Json(PushChangesResponse {
@@ -59,17 +66,27 @@ pub struct PullParams {
   since: i64,
 }
 
-pub async fn pull(State(state): State<AppState>, Query(params): Query<PullParams>) -> Json<PullChangesResponse> {
+pub async fn pull(
+  State(state): State<AppState>,
+  user: AuthUser,
+  Query(params): Query<PullParams>,
+) -> Result<Json<PullChangesResponse>, StatusCode> {
   let outcome = state
     .pull_handler
-    .handle(PullChangesQuery { since: params.since })
+    .handle(PullChangesQuery {
+      user_id: user.user_id,
+      since: params.since,
+    })
     .await
-    .expect("pull query failed");
+    .map_err(|err| {
+      tracing::error!("pull query failed: {err}");
+      StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-  Json(PullChangesResponse {
+  Ok(Json(PullChangesResponse {
     changes: outcome.changes.into_iter().map(to_server_change).collect(),
     cursor: outcome.cursor,
-  })
+  }))
 }
 
 fn to_server_change(stored: StoredChange) -> ServerChange {
@@ -87,13 +104,20 @@ fn to_server_change(stored: StoredChange) -> ServerChange {
 
 pub async fn stream(
   State(state): State<AppState>,
+  user: AuthUser,
   Query(params): Query<PullParams>,
-) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
   let items = state
     .stream_handler
-    .handle(StreamChangesQuery { since: params.since })
+    .handle(StreamChangesQuery {
+      user_id: user.user_id,
+      since: params.since,
+    })
     .await
-    .expect("stream query failed");
+    .map_err(|err| {
+      tracing::error!("stream query failed: {err}");
+      StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
   let event_stream = items.map(|item| {
     Ok(match item {
@@ -109,5 +133,5 @@ pub async fn stream(
     })
   });
 
-  Sse::new(event_stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(15)))
+  Ok(Sse::new(event_stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(15))))
 }

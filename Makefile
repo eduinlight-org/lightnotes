@@ -1,5 +1,7 @@
 -include .env
 
+export API_BASE_URL
+
 landing-dev:
 	dx serve --package landing --platform web --port $(LANDING_PORT)
 

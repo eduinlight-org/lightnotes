@@ -1,5 +1,11 @@
+mod auth;
+pub use auth::{use_auth, AuthState, AuthStatus, PersistedSession};
+
 mod boot;
 pub use boot::{use_boot, BootState};
+
+mod session;
+pub use session::use_persisted_session;
 
 mod notes;
 pub use notes::{
@@ -12,7 +18,7 @@ pub use use_notes::use_notes;
 mod preferences;
 
 mod sync;
-pub use sync::use_synced_notes;
+pub use sync::{api_base_url, use_synced_notes};
 
 mod ui;
 pub use ui::{use_ui, UiState};
