@@ -84,3 +84,6 @@ pub use settings_skeleton::SettingsSkeleton;
 
 mod tag_manager_dialog;
 pub use tag_manager_dialog::{TagManagerDialog, TagManagerPanel};
+
+mod user_avatar;
+pub use user_avatar::UserAvatar;

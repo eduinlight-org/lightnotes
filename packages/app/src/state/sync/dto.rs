@@ -7,7 +7,7 @@ use crate::state::notes::{now_ms, Folder, FolderIcon, Note, PersistedState, Tag}
 pub const DEFAULT_API_BASE_URL: &str = "http://localhost:4000";
 
 pub fn api_base_url() -> String {
-  std::env::var("API_BASE_URL").unwrap_or_else(|_| DEFAULT_API_BASE_URL.to_string())
+  option_env!("API_BASE_URL").unwrap_or(DEFAULT_API_BASE_URL).to_string()
 }
 
 pub fn folder_icon_to_dto(icon: FolderIcon) -> FolderIconDto {

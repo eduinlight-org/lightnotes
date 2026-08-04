@@ -16,6 +16,11 @@ pub async fn run(store: StoreHandle, offline: Signal<bool>) {
       continue;
     }
 
+    if store.api().access_token().is_none() {
+      tokio::time::sleep(Duration::from_millis(BASE_BACKOFF_MS)).await;
+      continue;
+    }
+
     let Some((row_id, change)) = store.peek_front_outbound().await else {
       tokio::time::sleep(Duration::from_millis(BASE_BACKOFF_MS)).await;
       continue;

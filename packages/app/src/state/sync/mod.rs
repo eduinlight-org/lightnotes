@@ -1,4 +1,5 @@
 mod dto;
+pub use dto::api_base_url;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod native;

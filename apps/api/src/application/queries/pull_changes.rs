@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::domain::ports::{ChangeRepository, RepositoryError, StoredChange};
 
 pub struct PullChangesQuery {
+  pub user_id: String,
   pub since: i64,
 }
 
@@ -17,7 +18,7 @@ pub struct PullChangesHandler {
 
 impl PullChangesHandler {
   pub async fn handle(&self, query: PullChangesQuery) -> Result<PullOutcome, RepositoryError> {
-    let changes = self.change_repo.list_since(query.since).await?;
+    let changes = self.change_repo.list_since(&query.user_id, query.since).await?;
     let cursor = changes.iter().map(|change| change.seq).max().unwrap_or(query.since);
     Ok(PullOutcome { changes, cursor })
   }

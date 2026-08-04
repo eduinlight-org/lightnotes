@@ -8,6 +8,7 @@ action-clear = Limpiar
 action-manage = Gestionar
 action-new-note = Nueva nota
 action-log-in = Iniciar sesión
+action-sign-out = Cerrar sesión
 action-previous = Anterior
 action-next = Siguiente
 
@@ -239,6 +240,14 @@ settings-editor = Editor
 settings-editor-markdown = Vista previa de Markdown en vivo
 settings-editor-folders-tags = Carpetas y etiquetas
 settings-editor-search = Búsqueda local de texto completo
+settings-account = Cuenta
+settings-account-description = Inicia sesión con Google para sincronizar tus notas entre dispositivos.
+auth-signed-in-as = Sesión iniciada como
+auth-not-signed-in = Sin sesión iniciada
+auth-sign-in-failed = Error al iniciar sesión
+auth-signing-in = Esperando al navegador…
+auth-sync-requires-sign-in = La sincronización está pausada hasta que inicies sesión.
+
 settings-about = Acerca de
 settings-version = Versión 0.1.0 · local-first · multiplataforma
 

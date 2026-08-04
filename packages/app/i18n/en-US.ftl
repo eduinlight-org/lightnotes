@@ -8,6 +8,7 @@ action-clear = Clear
 action-manage = Manage
 action-new-note = New note
 action-log-in = Log in
+action-sign-out = Sign out
 action-previous = Previous
 action-next = Next
 
@@ -239,6 +240,14 @@ settings-editor = Editor
 settings-editor-markdown = Live Markdown preview
 settings-editor-folders-tags = Folders & tags
 settings-editor-search = Full-text local search
+settings-account = Account
+settings-account-description = Sign in with Google to sync your notes across devices.
+auth-signed-in-as = Signed in as
+auth-not-signed-in = Not signed in
+auth-sign-in-failed = Sign-in failed
+auth-signing-in = Waiting for browser…
+auth-sync-requires-sign-in = Sync is paused until you sign in.
+
 settings-about = About
 settings-version = Version 0.1.0 · local-first · multi-platform
 

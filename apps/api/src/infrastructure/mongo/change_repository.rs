@@ -12,6 +12,7 @@ use crate::domain::ports::{ChangeRepository, InsertOutcome, RepositoryError, Sto
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct StoredChangeDoc {
+  user_id: String,
   change_id: String,
   seq: i64,
   device_id: String,
@@ -26,6 +27,7 @@ struct StoredChangeDoc {
 impl From<StoredChangeDoc> for StoredChange {
   fn from(value: StoredChangeDoc) -> Self {
     StoredChange {
+      user_id: value.user_id,
       seq: value.seq,
       change_id: value.change_id,
       device_id: value.device_id,
@@ -48,8 +50,8 @@ impl CollectionConfig for ChangesCollConf {
 
   fn indexes() -> Indexes {
     Indexes::new()
-      .with(Index::new("change_id").with_option(IndexOption::Unique))
-      .with(Index::new("seq").with_option(IndexOption::Unique))
+      .with(Index::new("user_id").with_key("change_id").with_option(IndexOption::Unique))
+      .with(Index::new("user_id").with_key("seq").with_option(IndexOption::Unique))
   }
 }
 
@@ -79,10 +81,13 @@ fn is_duplicate_key_error(err: &mongodb::error::Error) -> bool {
 
 #[async_trait]
 impl ChangeRepository for MongoChangeRepository {
-  async fn reserve_seq(&self) -> Result<i64, RepositoryError> {
+  async fn reserve_seq(&self, user_id: &str) -> Result<i64, RepositoryError> {
     let updated = self
       .counters
-      .find_one_and_update(doc! { "_id": "changes_seq" }, doc! { "$inc": { "value": 1_i64 } })
+      .find_one_and_update(
+        doc! { "_id": format!("changes_seq:{user_id}") },
+        doc! { "$inc": { "value": 1_i64 } },
+      )
       .upsert(true)
       .return_document(ReturnDocument::After)
       .await
@@ -95,11 +100,14 @@ impl ChangeRepository for MongoChangeRepository {
   async fn insert_if_new(&self, change: &Change, seq: i64, server_applied_at_ms: i64) -> Result<InsertOutcome, RepositoryError> {
     let repo = self.db.repository::<StoredChangeDoc>();
 
-    if let Some(existing) = repo.find_one(doc! { "change_id": &change.change_id }).await.map_err(backend_err)? {
+    let scope = doc! { "user_id": &change.user_id, "change_id": &change.change_id };
+
+    if let Some(existing) = repo.find_one(scope.clone()).await.map_err(backend_err)? {
       return Ok(InsertOutcome::AlreadyExists(existing.into()));
     }
 
     let stored = StoredChangeDoc {
+      user_id: change.user_id.clone(),
       change_id: change.change_id.clone(),
       seq,
       device_id: change.device_id.clone(),
@@ -115,7 +123,7 @@ impl ChangeRepository for MongoChangeRepository {
       Ok(_) => Ok(InsertOutcome::Inserted(stored.into())),
       Err(err) if is_duplicate_key_error(&err) => {
         let existing = repo
-          .find_one(doc! { "change_id": &change.change_id })
+          .find_one(scope)
           .await
           .map_err(backend_err)?
           .ok_or_else(|| RepositoryError::Backend("duplicate change vanished".into()))?;
@@ -125,11 +133,11 @@ impl ChangeRepository for MongoChangeRepository {
     }
   }
 
-  async fn list_since(&self, since: i64) -> Result<Vec<StoredChange>, RepositoryError> {
+  async fn list_since(&self, user_id: &str, since: i64) -> Result<Vec<StoredChange>, RepositoryError> {
     let repo = self.db.repository::<StoredChangeDoc>();
 
     let cursor = repo
-      .find(doc! { "seq": { "$gt": since } })
+      .find(doc! { "user_id": user_id, "seq": { "$gt": since } })
       .sort(doc! { "seq": 1_i32 })
       .await
       .map_err(backend_err)?;

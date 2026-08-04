@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 pub struct BootState {
   pub prefs_ready: Signal<bool>,
   pub store_ready: Signal<bool>,
+  pub session_ready: Signal<bool>,
   pub viewport_ready: Signal<bool>,
 }
 
@@ -12,12 +13,13 @@ impl BootState {
     Self {
       prefs_ready: Signal::new(false),
       store_ready: Signal::new(false),
+      session_ready: Signal::new(false),
       viewport_ready: Signal::new(false),
     }
   }
 
   pub fn ready(&self) -> bool {
-    (self.prefs_ready)() && (self.store_ready)() && (self.viewport_ready)()
+    (self.prefs_ready)() && (self.store_ready)() && (self.session_ready)() && (self.viewport_ready)()
   }
 }
 

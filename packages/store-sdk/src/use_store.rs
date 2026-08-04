@@ -85,11 +85,43 @@ impl StoreHandle {
     store.set_cursor(cursor).await
   }
 
+  pub async fn load_session(&self) -> Option<(String, String)> {
+    self.store().await?.load_session().await
+  }
+
+  pub async fn save_session(&self, user_id: &str, session_json: &str, updated_at_ms: i64) {
+    let Some(store) = self.store().await else {
+      return;
+    };
+
+    store.save_session(user_id, session_json, updated_at_ms).await
+  }
+
+  pub async fn clear_session(&self) {
+    let Some(store) = self.store().await else {
+      return;
+    };
+
+    store.clear_session().await
+  }
+
+  pub async fn clear_user_data(&self) {
+    let Some(store) = self.store().await else {
+      return;
+    };
+
+    store.clear_user_data().await
+  }
+
+  pub fn api(&self) -> Arc<ApiClient> {
+    self.api.clone()
+  }
+
   pub async fn push_changes(&self, changes: Vec<QueuedChange>) -> Result<(), ()> {
     self.api.push_changes(changes).await.map(|_| ()).map_err(|_| ())
   }
 
-  pub fn subscribe_changes(&self, since: i64) -> Pin<Box<dyn Stream<Item = SseChangeEvent> + Send>> {
+  pub fn subscribe_changes(&self, since: i64) -> Pin<Box<dyn Stream<Item = SseChangeEvent> + Send + '_>> {
     self.api.subscribe_changes(since)
   }
 }

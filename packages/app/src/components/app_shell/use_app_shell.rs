@@ -1,13 +1,20 @@
 use crate::boot::DISMISS_SPLASH_JS;
-use crate::state::{use_app_i18n, use_synced_notes, BootState};
+use crate::state::{use_app_i18n, use_persisted_session, use_synced_notes, AuthState, BootState};
 use dioxus::prelude::*;
 use ui::components::sidebar::use_viewport_resolved;
 
 const SPLASH_TIMEOUT_MS: u32 = 2500;
 
-pub fn use_app_shell() {
+#[derive(Clone, Copy)]
+pub struct AppShellState {
+  pub signed_in: bool,
+}
+
+pub fn use_app_shell() -> AppShellState {
   let boot = use_context_provider(BootState::seed);
+  let auth = use_context_provider(AuthState::empty);
   let store = use_synced_notes();
+  use_persisted_session(auth);
   use_app_i18n(store);
 
   let resolved = use_viewport_resolved();
@@ -61,4 +68,8 @@ pub fn use_app_shell() {
       let _ = eval.send(accent);
     });
   });
+
+  AppShellState {
+    signed_in: auth.is_signed_in(),
+  }
 }

@@ -3,6 +3,9 @@ use mongodb::bson::doc;
 use mongodb::Database;
 
 mod m0001_init_indexes;
+mod m0002_auth_collections;
+mod m0003_user_scoped_changes;
+mod m0004_auth_tickets;
 
 #[async_trait]
 pub trait Migration: Send + Sync {
@@ -11,7 +14,12 @@ pub trait Migration: Send + Sync {
 }
 
 pub fn registry() -> Vec<Box<dyn Migration>> {
-  vec![Box::new(m0001_init_indexes::InitIndexes)]
+  vec![
+    Box::new(m0001_init_indexes::InitIndexes),
+    Box::new(m0002_auth_collections::AuthCollections),
+    Box::new(m0003_user_scoped_changes::UserScopedChanges),
+    Box::new(m0004_auth_tickets::AuthTickets),
+  ]
 }
 
 pub async fn run_pending(db: &Database) {

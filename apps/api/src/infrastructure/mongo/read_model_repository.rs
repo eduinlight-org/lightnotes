@@ -10,6 +10,10 @@ fn backend_err(err: impl std::fmt::Display) -> RepositoryError {
   RepositoryError::Backend(err.to_string())
 }
 
+fn document_id(user_id: &str, entity_id: &str) -> String {
+  format!("{user_id}:{entity_id}")
+}
+
 pub struct MongoReadModelRepository {
   notes: Collection<Document>,
   folders: Collection<Document>,
@@ -32,74 +36,76 @@ impl MongoReadModelRepository {
       EntityKind::Tag => &self.tags,
     }
   }
+
+  async fn upsert(
+    collection: &Collection<Document>,
+    user_id: &str,
+    entity_id: &str,
+    payload: &impl serde::Serialize,
+    label: &str,
+  ) -> Result<(), RepositoryError> {
+    let mut document = to_bson(payload)
+      .map_err(backend_err)?
+      .as_document()
+      .cloned()
+      .ok_or_else(|| RepositoryError::Backend(format!("{label} did not serialize to a document")))?;
+
+    let id = document_id(user_id, entity_id);
+    document.insert("_id", id.clone());
+    document.insert("user_id", user_id.to_string());
+
+    collection
+      .update_one(doc! { "_id": &id }, UpdateModifications::Document(doc! { "$set": document }))
+      .upsert(true)
+      .await
+      .map_err(backend_err)?;
+
+    Ok(())
+  }
+
+  async fn delete(collection: &Collection<Document>, user_id: &str, entity_id: &str) -> Result<(), RepositoryError> {
+    collection
+      .delete_one(doc! { "_id": document_id(user_id, entity_id) })
+      .await
+      .map_err(backend_err)?;
+
+    Ok(())
+  }
 }
 
 #[async_trait]
 impl ReadModelRepository for MongoReadModelRepository {
-  async fn existing_updated_at_ms(&self, entity: EntityKind, entity_id: &str) -> Result<Option<i64>, RepositoryError> {
+  async fn existing_updated_at_ms(&self, user_id: &str, entity: EntityKind, entity_id: &str) -> Result<Option<i64>, RepositoryError> {
     let found = self
       .collection_for(entity)
-      .find_one(doc! { "_id": entity_id })
+      .find_one(doc! { "_id": document_id(user_id, entity_id) })
       .await
       .map_err(backend_err)?;
 
     Ok(found.and_then(|document| document.get_i64("updated_at_ms").ok()))
   }
 
-  async fn upsert_note(&self, note: &NoteDto) -> Result<(), RepositoryError> {
-    let mut document = to_bson(note).map_err(backend_err)?.as_document().cloned().ok_or_else(|| RepositoryError::Backend("note did not serialize to a document".into()))?;
-    document.insert("_id", note.id.clone());
-
-    self
-      .notes
-      .update_one(doc! { "_id": &note.id }, UpdateModifications::Document(doc! { "$set": document }))
-      .upsert(true)
-      .await
-      .map_err(backend_err)?;
-
-    Ok(())
+  async fn upsert_note(&self, user_id: &str, note: &NoteDto) -> Result<(), RepositoryError> {
+    Self::upsert(&self.notes, user_id, &note.id, note, "note").await
   }
 
-  async fn upsert_folder(&self, folder: &FolderDto) -> Result<(), RepositoryError> {
-    let mut document = to_bson(folder).map_err(backend_err)?.as_document().cloned().ok_or_else(|| RepositoryError::Backend("folder did not serialize to a document".into()))?;
-    document.insert("_id", folder.id.clone());
-
-    self
-      .folders
-      .update_one(doc! { "_id": &folder.id }, UpdateModifications::Document(doc! { "$set": document }))
-      .upsert(true)
-      .await
-      .map_err(backend_err)?;
-
-    Ok(())
+  async fn upsert_folder(&self, user_id: &str, folder: &FolderDto) -> Result<(), RepositoryError> {
+    Self::upsert(&self.folders, user_id, &folder.id, folder, "folder").await
   }
 
-  async fn upsert_tag(&self, tag: &TagDto) -> Result<(), RepositoryError> {
-    let mut document = to_bson(tag).map_err(backend_err)?.as_document().cloned().ok_or_else(|| RepositoryError::Backend("tag did not serialize to a document".into()))?;
-    document.insert("_id", tag.id.clone());
-
-    self
-      .tags
-      .update_one(doc! { "_id": &tag.id }, UpdateModifications::Document(doc! { "$set": document }))
-      .upsert(true)
-      .await
-      .map_err(backend_err)?;
-
-    Ok(())
+  async fn upsert_tag(&self, user_id: &str, tag: &TagDto) -> Result<(), RepositoryError> {
+    Self::upsert(&self.tags, user_id, &tag.id, tag, "tag").await
   }
 
-  async fn delete_note(&self, id: &str) -> Result<(), RepositoryError> {
-    self.notes.delete_one(doc! { "_id": id }).await.map_err(backend_err)?;
-    Ok(())
+  async fn delete_note(&self, user_id: &str, id: &str) -> Result<(), RepositoryError> {
+    Self::delete(&self.notes, user_id, id).await
   }
 
-  async fn delete_folder(&self, id: &str) -> Result<(), RepositoryError> {
-    self.folders.delete_one(doc! { "_id": id }).await.map_err(backend_err)?;
-    Ok(())
+  async fn delete_folder(&self, user_id: &str, id: &str) -> Result<(), RepositoryError> {
+    Self::delete(&self.folders, user_id, id).await
   }
 
-  async fn delete_tag(&self, id: &str) -> Result<(), RepositoryError> {
-    self.tags.delete_one(doc! { "_id": id }).await.map_err(backend_err)?;
-    Ok(())
+  async fn delete_tag(&self, user_id: &str, id: &str) -> Result<(), RepositoryError> {
+    Self::delete(&self.tags, user_id, id).await
   }
 }

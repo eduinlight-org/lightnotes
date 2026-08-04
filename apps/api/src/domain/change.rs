@@ -2,6 +2,7 @@ use sync_dto::{ChangeOp, ChangePayload, EntityKind};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Change {
+  pub user_id: String,
   pub change_id: String,
   pub device_id: String,
   pub entity: EntityKind,
