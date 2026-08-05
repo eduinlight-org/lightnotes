@@ -14,10 +14,6 @@ env:
   KUSTOMIZE_VERSION: "5.4.3"
   CD_REPOSITORY: eduinlight-org/lightnotes-cd
 
-concurrency:
-  group: cd-bump
-  cancel-in-progress: false
-
 jobs:
   bump:
     runs-on: [self-hosted, homelab]
