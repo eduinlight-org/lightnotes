@@ -2,7 +2,7 @@ name: Deploy landing page
 
 on:
   push:
-    branches: [main]
+    # branches: [main]
     paths:
       - "apps/landing/**"
       - "packages/ui/**"
