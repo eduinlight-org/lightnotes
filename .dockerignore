@@ -1,3 +1,6 @@
 *
-!deploy/landing/nginx.conf
+!deploy/spa.conf
+!target/dx/landing/release/web/server
 !target/dx/landing/release/web/public
+!target/dx/web/release/web/public
+!target/release/api

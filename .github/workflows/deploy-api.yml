@@ -1,15 +1,15 @@
-name: Deploy landing page
+name: Deploy api
 
 on:
   push:
     # branches: [main]
     paths:
-      - "apps/landing/**"
-      - "packages/ui/**"
-      - "deploy/landing/**"
+      - "apps/api/**"
+      - "packages/sync-dto/**"
+      - "deploy/api/**"
       - "Cargo.toml"
       - "Cargo.lock"
-      - ".github/workflows/deploy-landing.yml"
+      - ".github/workflows/deploy-api.yml"
   workflow_dispatch:
 
 permissions:
@@ -17,12 +17,11 @@ permissions:
   packages: write
 
 concurrency:
-  group: deploy-landing
+  group: deploy-api
   cancel-in-progress: false
 
 env:
-  DIOXUS_CLI_VERSION: "0.7.9"
-  IMAGE: ghcr.io/eduinlight-org/lightnotes-landing
+  IMAGE: ghcr.io/eduinlight-org/lightnotes-api
 
 jobs:
   build:
@@ -33,27 +32,14 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
 
       - name: Cache cargo registry and target
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: ". -> target"
 
-      - name: Cache dioxus-cli
-        id: cache-dx
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/dx
-          key: dioxus-cli-${{ runner.os }}-${{ env.DIOXUS_CLI_VERSION }}
-
-      - name: Install dioxus-cli
-        if: steps.cache-dx.outputs.cache-hit != 'true'
-        run: cargo install dioxus-cli --version ${{ env.DIOXUS_CLI_VERSION }} --locked
-
-      - name: Build landing page
-        run: dx build --package landing --platform web --fullstack true --release
+      - name: Build api
+        run: cargo build --package api --release
 
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -61,7 +47,7 @@ jobs:
       - name: Build and push image
         run: |
           docker build \
-            -f deploy/landing/Dockerfile \
+            -f deploy/api/Dockerfile \
             -t ${{ env.IMAGE }}:${{ github.sha }} \
             -t ${{ env.IMAGE }}:latest \
             .
@@ -72,6 +58,6 @@ jobs:
     needs: build
     uses: ./.github/workflows/cd-bump.yml
     with:
-      image: ghcr.io/eduinlight-org/lightnotes-landing
+      image: ghcr.io/eduinlight-org/lightnotes-api
       tag: ${{ github.sha }}
     secrets: inherit
