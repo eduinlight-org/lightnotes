@@ -6,6 +6,7 @@ on:
     paths:
       - "apps/landing/**"
       - "packages/ui/**"
+      - "deploy/landing/**"
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/deploy-landing.yml"
@@ -13,19 +14,21 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
+  packages: write
 
 concurrency:
-  group: "pages"
+  group: deploy-landing
   cancel-in-progress: false
 
 env:
   DIOXUS_CLI_VERSION: "0.7.9"
+  IMAGE: ghcr.io/eduinlight-org/lightnotes-landing
+  KUSTOMIZE_VERSION: "5.4.3"
+  CD_REPOSITORY: eduinlight-org/lightnotes-cd
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, homelab]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,28 +55,60 @@ jobs:
         run: cargo install dioxus-cli --version ${{ env.DIOXUS_CLI_VERSION }} --locked
 
       - name: Build landing page
-        run: dx build --package landing --platform web --release --base-path "${{ github.event.repository.name }}"
+        run: dx build --package landing --platform web --release
 
-      - name: Add SPA fallback for GitHub Pages
-        run: cp target/dx/landing/release/web/public/index.html target/dx/landing/release/web/public/404.html
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
+      - name: Build and push image
+        run: |
+          docker build \
+            -f deploy/landing/Dockerfile \
+            -t ${{ env.IMAGE }}:${{ github.sha }} \
+            -t ${{ env.IMAGE }}:latest \
+            .
+          docker push ${{ env.IMAGE }}:${{ github.sha }}
+          docker push ${{ env.IMAGE }}:latest
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: target/dx/landing/release/web/public
-
-  deploy:
+  bump-cd:
     needs: build
-    runs-on: self-hosted
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: [self-hosted, homelab]
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Checkout CD repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CD_REPOSITORY }}
+          token: ${{ secrets.CD_REPO_TOKEN }}
+          ref: main
+          path: cd
+
+      - name: Cache kustomize
+        id: cache-kustomize
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin/kustomize
+          key: kustomize-${{ runner.os }}-${{ env.KUSTOMIZE_VERSION }}
+
+      - name: Install kustomize
+        if: steps.cache-kustomize.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.local/bin
+          curl -sSfL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${{ env.KUSTOMIZE_VERSION }}/kustomize_v${{ env.KUSTOMIZE_VERSION }}_linux_amd64.tar.gz" \
+            | tar -xz -C ~/.local/bin kustomize
+
+      - name: Set landing image tag
+        working-directory: cd/prod
+        run: ~/.local/bin/kustomize edit set image ${{ env.IMAGE }}=:${{ github.sha }}
+
+      - name: Commit and push
+        working-directory: cd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "prod/kustomization.yaml already at ${{ github.sha }}, nothing to push"
+            exit 0
+          fi
+          git add prod/kustomization.yaml
+          git commit -m "chore(landing): deploy ${{ github.sha }}"
+          git push origin main

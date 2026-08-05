@@ -1,0 +1,3 @@
+*
+!deploy/landing/nginx.conf
+!target/dx/landing/release/web/public
