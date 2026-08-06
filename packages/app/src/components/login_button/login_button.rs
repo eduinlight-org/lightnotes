@@ -11,6 +11,8 @@ pub fn LoginButton() -> Element {
   let failed = (state.failed)();
   let pending = (state.pending)();
 
+  let show_fallback = !ready || !cfg!(target_arch = "wasm32");
+
   let label = if failed {
     t!("auth-sign-in-failed")
   } else if pending {
@@ -24,7 +26,7 @@ pub fn LoginButton() -> Element {
           if cfg!(target_arch = "wasm32") {
               div { id: GOOGLE_BUTTON_ID, class: "min-h-[40px]" }
           }
-          if !ready || !cfg!(target_arch = "wasm32") {
+          if show_fallback {
               Button {
                   variant: ButtonVariant::Outline,
                   disabled: cfg!(target_arch = "wasm32") || pending,
@@ -33,7 +35,7 @@ pub fn LoginButton() -> Element {
                   span { "{label}" }
               }
           }
-          if failed && ready {
+          if failed && !show_fallback {
               p { class: "text-sm text-[var(--secondary-color-5)]", {t!("auth-sign-in-failed")} }
           }
       }
