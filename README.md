@@ -133,6 +133,44 @@ The web, desktop, and mobile apps work fully offline without the API running —
 | Notes app — iOS | `make app-ios-build` |
 | Backend API | `make api-build` |
 
+### Releasing the desktop apps
+
+Desktop releases are cut by pushing a tag. One tag produces **one** GitHub Release carrying the artifacts for every platform — there are no platform-only releases.
+
+```bash
+# 1. bump the version in apps/desktop/Cargo.toml, commit, merge to main
+# 2. tag it
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+That triggers `.github/workflows/release-desktop.yml`, which:
+
+1. resolves the version from the tag and **fails if it disagrees with `apps/desktop/Cargo.toml`**,
+2. fans out to the macOS, Windows and Linux workflows in parallel,
+3. collects every artifact, writes `SHA256SUMS`, and publishes a single **draft** release with notes generated from the commits since the previous release.
+
+The release job declares `needs: [macos, windows, linux]`, so **if any platform fails, nothing is published** — a half-built release can never reach users. The release is created as a draft: review the artifacts, then hit Publish. Tags with a prerelease suffix (`v1.2.3-rc.1`, `v1.2.3-beta.2`) are additionally marked as prereleases.
+
+The tag is the source of truth for the artifact filenames, but the *bundlers* stamp the version from `apps/desktop/Cargo.toml` into the binaries themselves — a `.dmg` named `1.2.3` whose `Info.plist` says `0.1.0` would be worse than a failed build, which is why the mismatch is a hard error rather than a warning.
+
+Expected release contents:
+
+```
+LightNotes-1.2.3-macos-aarch64.dmg
+LightNotes-1.2.3-macos-x86_64.dmg
+LightNotes-1.2.3-windows-x86_64.msi
+LightNotes-1.2.3-windows-x86_64-setup.exe
+LightNotes-1.2.3-linux-x86_64.AppImage
+LightNotes-1.2.3-linux-x86_64.deb
+LightNotes-1.2.3-linux-x86_64.rpm
+SHA256SUMS
+```
+
+Running the workflow via **workflow_dispatch** is a dry run: it builds all three platforms and uploads the artifacts to the run, but publishes no release. Use it to check a platform after changing its workflow.
+
+Per-platform details — signing secrets, WebView2, the glibc floor — are in [`apps/desktop/README.md`](apps/desktop/README.md).
+
 ## Styling
 
 Each platform app scans its own `src/` plus the shared `packages/app` and `packages/ui` sources for Tailwind classes — `dx serve`/`dx build` compile this automatically, no separate Node/npm step required.
