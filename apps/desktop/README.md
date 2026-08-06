@@ -67,6 +67,8 @@ These names are dictated by `dx` — it looks up exactly these variables, so don
 
 Setting `APPLE_CERTIFICATE` turns on signing: `dx` imports it into a temporary keychain and finds the identity. Setting `APPLE_ID` additionally turns on notarization. Signing without notarizing is a valid intermediate state, and the script warns when it detects it.
 
+The script **unsets** any of these that are empty before invoking `dx`. That is not tidiness — it is load-bearing. `dx` decides whether to sign with `std::env::var("APPLE_CERTIFICATE").ok()`, and a variable that is *defined but empty* returns `Some("")`, not `None`. A workflow that writes `APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}` for a secret that doesn't exist defines exactly such a variable, so `dx` would try to import an empty certificate and die with `SecKeychainItemImport: One or more parameters passed to a function were not valid`. Unsetting is what makes "no secrets configured" mean "unsigned build" instead of "failed build".
+
 Export the certificate with:
 
 ```bash

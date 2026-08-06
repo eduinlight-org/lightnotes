@@ -15,6 +15,12 @@ esac
 
 BASE="LightNotes-${VERSION}-macos-${ARCH}"
 
+for var in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+  if [ -z "${!var:-}" ]; then
+    unset "$var"
+  fi
+done
+
 if [ -z "${APPLE_CERTIFICATE:-}" ]; then
   echo "::warning::APPLE_CERTIFICATE is not set, producing an unsigned build"
 elif [ -z "${APPLE_ID:-}" ]; then
