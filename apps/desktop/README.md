@@ -54,9 +54,9 @@ Nothing else is needed. `dx` downloads `linuxdeploy` itself for the AppImage, an
 
 ### glibc floor
 
-CI builds inside an `ubuntu:22.04` container rather than directly on `ubuntu-latest`. Binaries link against the glibc they were built on and cannot run on anything older, so building on the newest runner would silently drop support for every distro older than it.
+CI builds inside an `ubuntu:22.04` container. Binaries link against the glibc they were built on and cannot run on anything older, so building directly on the host would tie our floor to whatever the runner happens to be.
 
-22.04 gives a **glibc 2.35** floor, which covers Ubuntu 22.04+, Debian 12+, and current Fedora. Using a container rather than an older runner label also means the build doesn't break when GitHub retires a runner image.
+22.04 gives a **glibc 2.35** floor, which covers Ubuntu 22.04+, Debian 12+, and current Fedora. Pinning it in a container also means the floor is a deliberate choice recorded in the workflow, rather than a side effect of the host image.
 
 ### Desktop integration
 
@@ -68,7 +68,9 @@ The `.deb` declares its runtime dependencies (`libwebkit2gtk-4.1-0`, `libgtk-3-0
 
 ### CI
 
-`.github/workflows/release-desktop-linux.yml` builds on `ubuntu-latest` inside the 22.04 container by calling the same script. It is triggered by `workflow_call` from the umbrella release workflow, and by `workflow_dispatch` for manual runs.
+`.github/workflows/release-desktop-linux.yml` runs on the `[self-hosted, homelab]` runner, inside the 22.04 container, calling the same script. It is triggered by `workflow_call` from the umbrella release workflow, and by `workflow_dispatch` for manual runs.
+
+The macOS and Windows workflows stay on GitHub-hosted runners — the homelab runner is Linux X64, so it cannot build them.
 
 Artifacts are uploaded as `desktop-linux-<arch>` and named:
 
