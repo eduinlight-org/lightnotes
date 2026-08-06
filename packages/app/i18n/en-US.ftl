@@ -247,6 +247,7 @@ auth-not-signed-in = Not signed in
 auth-sign-in-failed = Sign-in failed
 auth-signing-in = Waiting for browser…
 auth-sync-requires-sign-in = Sync is paused until you sign in.
+auth-login-subtitle = Sign in with Google to reach your notes on every device.
 
 settings-about = About
 settings-version = Version 0.1.0 · local-first · multi-platform

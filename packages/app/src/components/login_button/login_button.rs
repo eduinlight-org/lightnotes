@@ -11,8 +11,6 @@ pub fn LoginButton() -> Element {
   let failed = (state.failed)();
   let pending = (state.pending)();
 
-  let has_status = failed || pending;
-
   let label = if failed {
     t!("auth-sign-in-failed")
   } else if pending {
@@ -21,12 +19,10 @@ pub fn LoginButton() -> Element {
     t!("action-log-in")
   };
 
-  let label_class = if has_status { "inline" } else { "hidden sm:inline" };
-
   rsx! {
-      div { class: "flex items-center gap-2",
+      div { class: "flex flex-col items-center gap-2",
           if cfg!(target_arch = "wasm32") {
-              div { id: GOOGLE_BUTTON_ID, class: "min-h-[32px]" }
+              div { id: GOOGLE_BUTTON_ID, class: "min-h-[40px]" }
           }
           if !ready || !cfg!(target_arch = "wasm32") {
               Button {
@@ -34,8 +30,11 @@ pub fn LoginButton() -> Element {
                   disabled: cfg!(target_arch = "wasm32") || pending,
                   onclick: move |_| state.start_sign_in(),
                   LogIn { size: "16px" }
-                  span { class: label_class, "{label}" }
+                  span { "{label}" }
               }
+          }
+          if failed && ready {
+              p { class: "text-sm text-[var(--secondary-color-5)]", {t!("auth-sign-in-failed")} }
           }
       }
   }

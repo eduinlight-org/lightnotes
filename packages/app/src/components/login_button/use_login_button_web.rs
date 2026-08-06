@@ -45,9 +45,10 @@ if (target) {
   });
   window.google.accounts.id.renderButton(target, {
     theme: 'outline',
-    size: 'medium',
+    size: 'large',
     shape: 'pill',
-    text: 'signin',
+    text: 'signin_with',
+    width: 280,
   });
   dioxus.send('__ready__');
 }
