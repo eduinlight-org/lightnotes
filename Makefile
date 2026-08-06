@@ -42,7 +42,7 @@ app-macos-bundle:
 	dx bundle --package desktop --platform macos --release --package-types macos --package-types dmg
 
 app-windows-bundle:
-	dx bundle --package desktop --platform windows --release --package-types msi --package-types nsis
+	pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/windows-bundle.ps1
 
 app-linux-bundle:
 	dx bundle --package desktop --platform linux --release --package-types appimage --package-types deb --package-types rpm
