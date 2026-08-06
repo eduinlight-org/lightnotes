@@ -45,7 +45,7 @@ app-windows-bundle:
 	dx bundle --package desktop --platform windows --release --package-types msi --package-types nsis
 
 app-linux-bundle:
-	dx bundle --package desktop --platform linux --release --package-types appimage --package-types deb --package-types rpm
+	./scripts/linux-bundle.sh
 
 app-android-bundle:
 	./scripts/android-bundle.sh
