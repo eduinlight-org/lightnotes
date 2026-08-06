@@ -2,7 +2,7 @@ name: Deploy api
 
 on:
   push:
-    # branches: [main]
+    branches: [main]
     paths:
       - "apps/api/**"
       - "packages/sync-dto/**"
