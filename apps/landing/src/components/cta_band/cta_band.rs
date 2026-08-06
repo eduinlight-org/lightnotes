@@ -1,8 +1,6 @@
+use crate::config;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
-
-const GITHUB_URL: &str = "https://github.com/eduinlight/lightnotes";
-const WEB_APP_URL: &str = "https://lightnotes.eduindev.com";
 
 #[component]
 pub fn CtaBand() -> Element {
@@ -20,8 +18,8 @@ pub fn CtaBand() -> Element {
           }
           div {
               class: "mt-7 flex flex-wrap gap-3",
-              a { class: "btn btn-primary btn-lg", href: GITHUB_URL, {t!("cta-view-on-github")} }
-              a { class: "btn btn-ghost btn-lg", href: WEB_APP_URL, "lightnotes.eduindev.com" }
+              a { class: "btn btn-primary btn-lg", href: config::GITHUB_URL, {t!("cta-view-on-github")} }
+              a { class: "btn btn-ghost btn-lg", href: config::APP_URL, {config::app_host()} }
           }
       }
   }

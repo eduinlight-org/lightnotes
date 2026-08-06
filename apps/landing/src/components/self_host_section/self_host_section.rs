@@ -1,7 +1,6 @@
+use crate::config;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
-
-const SETUP_GUIDE_URL: &str = "https://github.com/eduinlight/lightnotes#getting-started";
 
 const COMMANDS: [(&str, &str); 4] = [
   ("cp .env.dist .env", ""),
@@ -31,7 +30,7 @@ pub fn SelfHostSection() -> Element {
               }
               div {
                   class: "mt-[26px] flex flex-wrap gap-3",
-                  a { class: "btn btn-primary btn-md", href: SETUP_GUIDE_URL, {t!("selfhost-setup-guide")} }
+                  a { class: "btn btn-primary btn-md", href: config::github_setup_url(), {t!("selfhost-setup-guide")} }
               }
           }
           div {

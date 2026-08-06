@@ -10,5 +10,5 @@ unic-langid = { workspace = true }
 
 [features]
 default = []
-web = ["dioxus/web"]
+web = ["dioxus/web", "dioxus/fullstack"]
 server = ["dioxus/fullstack", "dioxus/server"]

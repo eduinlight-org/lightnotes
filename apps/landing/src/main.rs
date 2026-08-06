@@ -4,6 +4,8 @@ use dioxus_i18n::t;
 mod components;
 use components::{Footer, LanguageSelector, NavBar};
 
+mod config;
+
 mod i18n;
 use i18n::use_landing_i18n;
 
@@ -17,14 +19,12 @@ const BRAND_ICON: Asset = asset!("/assets/notes-icon.png");
 const INTER_CSS: &str = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap";
 const PHOSPHOR_CSS: &str = "https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css";
 
-const GITHUB_URL: &str = "https://github.com/eduinlight/lightnotes";
-
 const NAV_LINKS: [(&str, &str); 5] = [
   ("#features", "nav-features"),
   ("#platforms", "nav-platforms"),
   ("#selfhost", "nav-self-hosting"),
   ("#download", "nav-download"),
-  (GITHUB_URL, "nav-github"),
+  (config::GITHUB_URL, "nav-github"),
 ];
 
 #[derive(Debug, Clone, Routable, PartialEq)]
@@ -72,7 +72,7 @@ fn LandingNavbar() -> Element {
               },
               actions: rsx! {
                   LanguageSelector {}
-                  a { class: "btn btn-primary", href: GITHUB_URL, {t!("nav-cta")} }
+                  a { class: "btn btn-primary", href: config::APP_URL, {t!("nav-cta")} }
               },
               for (href , label_key) in NAV_LINKS {
                   a { href, {t!(label_key)} }

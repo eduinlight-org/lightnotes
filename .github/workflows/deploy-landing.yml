@@ -23,6 +23,8 @@ concurrency:
 env:
   DIOXUS_CLI_VERSION: "0.7.9"
   IMAGE: ghcr.io/eduinlight-org/lightnotes-landing
+  LANDING_APP_URL: https://app-lightnotes.eduindev.com
+  LANDING_GITHUB_URL: https://github.com/eduinlight-org/lightnotes
 
 jobs:
   build:
@@ -40,6 +42,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: ". -> target"
+          key: landing-${{ env.LANDING_APP_URL }}-${{ env.LANDING_GITHUB_URL }}
 
       - name: Cache dioxus-cli
         id: cache-dx
