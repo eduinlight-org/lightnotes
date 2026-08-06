@@ -1,15 +1,21 @@
-name: Deploy landing page
+name: Deploy web app
 
 on:
   push:
     # branches: [main]
     paths:
-      - "apps/landing/**"
+      - "apps/web/**"
+      - "packages/app/**"
       - "packages/ui/**"
-      - "deploy/landing/**"
+      - "packages/editor/**"
+      - "packages/api-sdk/**"
+      - "packages/sync-dto/**"
+      - "packages/store-sdk/**"
+      - "deploy/web/**"
+      - "deploy/spa.conf"
       - "Cargo.toml"
       - "Cargo.lock"
-      - ".github/workflows/deploy-landing.yml"
+      - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
 
 permissions:
@@ -17,14 +23,13 @@ permissions:
   packages: write
 
 concurrency:
-  group: deploy-landing
+  group: deploy-web
   cancel-in-progress: false
 
 env:
   DIOXUS_CLI_VERSION: "0.7.9"
-  IMAGE: ghcr.io/eduinlight-org/lightnotes-landing
-  LANDING_APP_URL: https://app-lightnotes.eduindev.com
-  LANDING_GITHUB_URL: https://github.com/eduinlight-org/lightnotes
+  IMAGE: ghcr.io/eduinlight-org/lightnotes-web
+  API_BASE_URL: https://api-lightnotes.eduindev.com
 
 jobs:
   build:
@@ -42,7 +47,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: ". -> target"
-          key: landing-${{ env.LANDING_APP_URL }}-${{ env.LANDING_GITHUB_URL }}
+          key: web-${{ env.API_BASE_URL }}
 
       - name: Cache dioxus-cli
         id: cache-dx
@@ -55,8 +60,8 @@ jobs:
         if: steps.cache-dx.outputs.cache-hit != 'true'
         run: cargo install dioxus-cli --version ${{ env.DIOXUS_CLI_VERSION }} --locked
 
-      - name: Build landing page
-        run: dx build --package landing --platform web --fullstack true --release
+      - name: Build web app
+        run: dx build --package web --platform web --release
 
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -64,7 +69,7 @@ jobs:
       - name: Build and push image
         run: |
           docker build \
-            -f deploy/landing/Dockerfile \
+            -f deploy/web/Dockerfile \
             -t ${{ env.IMAGE }}:${{ github.sha }} \
             -t ${{ env.IMAGE }}:latest \
             .
@@ -75,6 +80,6 @@ jobs:
     needs: build
     uses: ./.github/workflows/cd-bump.yml
     with:
-      image: ghcr.io/eduinlight-org/lightnotes-landing
+      image: ghcr.io/eduinlight-org/lightnotes-web
       tag: ${{ github.sha }}
     secrets: inherit

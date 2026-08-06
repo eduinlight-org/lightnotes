@@ -1,8 +1,6 @@
+use crate::config;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
-
-const GITHUB_BUILD_URL: &str = "https://github.com/eduinlight/lightnotes#building-for-release";
-const WEB_APP_URL: &str = "https://lightnotes.eduindev.com";
 
 #[derive(Clone, Copy)]
 enum Platform {
@@ -67,8 +65,8 @@ pub fn DownloadSection() -> Element {
           }
           div {
               class: "mt-[22px] flex flex-wrap gap-3",
-              a { class: "btn btn-primary btn-md", href: WEB_APP_URL, {t!("download-open-web-app")} }
-              a { class: "btn btn-secondary btn-md", href: GITHUB_BUILD_URL, {t!("download-build-from-source")} }
+              a { class: "btn btn-primary btn-md", href: config::APP_URL, {t!("download-open-web-app")} }
+              a { class: "btn btn-secondary btn-md", href: config::github_build_url(), {t!("download-build-from-source")} }
           }
       }
   }

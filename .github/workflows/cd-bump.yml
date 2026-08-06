@@ -1,0 +1,72 @@
+name: Bump CD image tag
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        required: true
+        type: string
+      tag:
+        required: true
+        type: string
+
+env:
+  KUSTOMIZE_VERSION: "5.4.3"
+  CD_REPOSITORY: eduinlight-org/lightnotes-cd
+
+jobs:
+  bump:
+    runs-on: [self-hosted, homelab]
+    steps:
+      - name: Checkout CD repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CD_REPOSITORY }}
+          token: ${{ secrets.CD_REPO_TOKEN }}
+          ref: main
+          path: cd
+
+      - name: Cache kustomize
+        id: cache-kustomize
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin/kustomize
+          key: kustomize-${{ runner.os }}-${{ env.KUSTOMIZE_VERSION }}
+
+      - name: Install kustomize
+        if: steps.cache-kustomize.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.local/bin
+          curl -sSfL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${{ env.KUSTOMIZE_VERSION }}/kustomize_v${{ env.KUSTOMIZE_VERSION }}_linux_amd64.tar.gz" \
+            | tar -xz -C ~/.local/bin kustomize
+
+      - name: Set image tag and push
+        working-directory: cd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            (cd prod && ~/.local/bin/kustomize edit set image ${{ inputs.image }}=:${{ inputs.tag }})
+
+            if git diff --quiet; then
+              echo "${{ inputs.image }} already at ${{ inputs.tag }}, nothing to push"
+              exit 0
+            fi
+
+            git add prod/kustomization.yaml
+            git commit -m "chore(${{ inputs.image }}): deploy ${{ inputs.tag }}"
+
+            if git push origin main; then
+              exit 0
+            fi
+
+            echo "push rejected, retrying (attempt ${attempt})"
+            sleep $((attempt * 3))
+          done
+
+          echo "failed to push after 5 attempts"
+          exit 1

@@ -1,9 +1,8 @@
+use crate::config;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 
 const HERO_SHOT: Asset = asset!("/assets/screenshots/desktop-notes-list.png");
-const GITHUB_URL: &str = "https://github.com/eduinlight/lightnotes";
-const WEB_APP_URL: &str = "https://lightnotes.eduindev.com";
 
 #[component]
 pub fn Hero() -> Element {
@@ -24,8 +23,8 @@ pub fn Hero() -> Element {
               }
               div {
                   class: "mt-[30px] flex flex-wrap gap-3",
-                  a { class: "btn btn-primary btn-lg", href: GITHUB_URL, {t!("hero-clone-repo")} }
-                  a { class: "btn btn-secondary btn-lg", href: WEB_APP_URL, {t!("hero-try-web-app")} }
+                  a { class: "btn btn-primary btn-lg", href: config::GITHUB_URL, {t!("hero-clone-repo")} }
+                  a { class: "btn btn-secondary btn-lg", href: config::APP_URL, {t!("hero-try-web-app")} }
               }
               div {
                   class: "mt-[26px] flex flex-wrap items-center gap-2.5",

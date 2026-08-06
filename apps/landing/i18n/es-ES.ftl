@@ -5,7 +5,7 @@ nav-platforms = Plataformas
 nav-self-hosting = Autoalojamiento
 nav-download = Descargas
 nav-github = GitHub
-nav-cta = Consigue LightNotes
+nav-cta = Abrir app
 nav-primary = Principal
 nav-language = Idioma
 

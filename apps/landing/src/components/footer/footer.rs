@@ -1,3 +1,4 @@
+use crate::config;
 use dioxus::prelude::*;
 use dioxus_i18n::t;
 
@@ -12,11 +13,13 @@ const PRODUCT_LINKS: [(&str, &str); 4] = [
   ("#download", "nav-download"),
 ];
 
-const SOURCE_LINKS: [(&str, &str); 3] = [
-  ("https://github.com/eduinlight/lightnotes", "footer-repository"),
-  ("https://github.com/eduinlight/lightnotes/blob/main/LICENSE", "footer-license"),
-  ("https://dioxuslabs.com/", "footer-dioxus"),
-];
+fn source_links() -> [(String, &'static str); 3] {
+  [
+    (config::GITHUB_URL.to_string(), "footer-repository"),
+    (config::github_license_url(), "footer-license"),
+    (config::DIOXUS_URL.to_string(), "footer-dioxus"),
+  ]
+}
 
 #[component]
 pub fn Footer() -> Element {
@@ -44,14 +47,14 @@ pub fn Footer() -> Element {
               div {
                   class: "grid gap-1.5",
                   span { class: FOOTER_HEADING_CLASS, {t!("footer-source")} }
-                  for (href , label_key) in SOURCE_LINKS {
+                  for (href , label_key) in source_links() {
                       a { href, class: "no-underline", {t!(label_key)} }
                   }
               }
               div {
                   class: "grid gap-1.5",
                   span { class: FOOTER_HEADING_CLASS, {t!("footer-contact")} }
-                  a { href: "mailto:eduinlight@gmail.com", class: "no-underline", "eduinlight@gmail.com" }
+                  a { href: config::contact_mailto(), class: "no-underline", {config::CONTACT_EMAIL} }
               }
           }
       }
