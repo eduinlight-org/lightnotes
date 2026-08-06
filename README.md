@@ -169,7 +169,12 @@ SHA256SUMS
 
 Running the workflow via **workflow_dispatch** is a dry run: it builds all three platforms and uploads the artifacts to the run, but publishes no release. Use it to check a platform after changing its workflow.
 
-The Linux *build* runs on the `[self-hosted, homelab]` runner; the small `version` and `release` coordination jobs run on GitHub-hosted runners. That split is deliberate. A self-hosted runner reuses one workspace directory across jobs, and the Linux build runs inside a container as `root` — so it leaves root-owned `target/` and `dist/` behind. A later job running directly on the host, as the unprivileged runner user, then fails in `actions/checkout` with `EACCES` trying to clean them. Keeping host-level jobs off that runner avoids the collision entirely, and the Linux job additionally hands the workspace back writable when it finishes.
+The `version`, `linux` and `release` jobs all run on the `[self-hosted, homelab]` runner. macOS and Windows use GitHub-hosted runners, since the self-hosted one is Linux X64.
+
+That runner is itself a Docker container, defined in `/opt/gh-runner-docker` on the runner host and built from `ubuntu:22.04` with the WebKitGTK build dependencies baked in. Two consequences worth knowing:
+
+- The **glibc floor is pinned by the runner image**, not by a `container:` block in a workflow. The host is Debian 12 (glibc 2.36); the runner image is Ubuntu 22.04 (glibc 2.35), which is what we actually ship against.
+- Every job runs as the same unprivileged user inside that container. An earlier arrangement — a `container:` block on a host-installed runner — left `root`-owned files in the shared workspace that later host-level jobs could not clean, failing `actions/checkout` with `EACCES`. Running the runner itself in the container removes that class of problem rather than working around it.
 
 Per-platform details — signing secrets, WebView2, the glibc floor — are in [`apps/desktop/README.md`](apps/desktop/README.md).
 
