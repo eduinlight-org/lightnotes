@@ -555,9 +555,9 @@ impl NotesStore {
 
   pub fn snapshot(&self) -> PersistedState {
     PersistedState {
-      notes: (self.notes)(),
-      folders: (self.folders)(),
-      tags: (self.tags)(),
+      notes: self.owned_notes(),
+      folders: self.owned_folders(),
+      tags: self.owned_tags(),
       theme: self.theme(),
       accent: self.accent(),
       language: self.language(),
