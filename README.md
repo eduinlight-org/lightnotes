@@ -169,6 +169,8 @@ SHA256SUMS
 
 Running the workflow via **workflow_dispatch** is a dry run: it builds all three platforms and uploads the artifacts to the run, but publishes no release. Use it to check a platform after changing its workflow.
 
+The Linux *build* runs on the `[self-hosted, homelab]` runner; the small `version` and `release` coordination jobs run on GitHub-hosted runners. That split is deliberate. A self-hosted runner reuses one workspace directory across jobs, and the Linux build runs inside a container as `root` — so it leaves root-owned `target/` and `dist/` behind. A later job running directly on the host, as the unprivileged runner user, then fails in `actions/checkout` with `EACCES` trying to clean them. Keeping host-level jobs off that runner avoids the collision entirely, and the Linux job additionally hands the workspace back writable when it finishes.
+
 Per-platform details — signing secrets, WebView2, the glibc floor — are in [`apps/desktop/README.md`](apps/desktop/README.md).
 
 ## Styling
