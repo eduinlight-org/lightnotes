@@ -16,10 +16,10 @@ const BASE_BACKOFF_MS: u64 = 1000;
 const MAX_BACKOFF_MS: u64 = 30_000;
 const OUTBOUND_DEBOUNCE_MS: u64 = 600;
 
-async fn apply_outbound(handle: StoreHandle, changes: Vec<QueuedChange>) {
+async fn apply_outbound(handle: StoreHandle, user_id: String, changes: Vec<QueuedChange>) {
   for change in &changes {
-    handle.apply(change).await;
-    handle.enqueue_outbound(change).await;
+    handle.apply(&user_id, change).await;
+    handle.enqueue_outbound(&user_id, change).await;
   }
 }
 
@@ -41,7 +41,12 @@ pub fn use_synced_notes() -> NotesStore {
     offline.set(store.sync() == SyncStatus::Offline);
   });
 
-  let handle = use_synced_store(StoreConfig::new(api_base_url()), offline);
+  let mut active_user = use_signal(|| None::<String>);
+  use_effect(move || {
+    active_user.set(auth.user().map(|user| user.id));
+  });
+
+  let handle = use_synced_store(StoreConfig::new(api_base_url()), offline, active_user);
   use_context_provider(|| handle.clone());
 
   let mut hydrated = boot.store_ready;
@@ -85,24 +90,19 @@ pub fn use_synced_notes() -> NotesStore {
 
     reset_handle.api().set_tokens(tokens);
 
+    let Some(user_id) = user_id else {
+      hydrated.set(true);
+      return;
+    };
+
+    store.set_user(user_id.clone());
+
     let handle = reset_handle.clone();
     let task = spawn(async move {
-      let stored_user = handle.load_session().await.map(|(id, _)| id);
-
-      let switched_account = match (&user_id, &stored_user) {
-        (Some(current), Some(previous)) => current != previous,
-        (None, Some(_)) => true,
-        _ => false,
-      };
-
-      if switched_account {
-        handle.clear_user_data().await;
-      }
-
-      let local_snapshot = handle.load_snapshot().await;
-      let notes: Vec<Note> = local_snapshot.notes.into_iter().map(note_from_dto).collect();
-      let folders: Vec<Folder> = local_snapshot.folders.into_iter().map(folder_from_dto).collect();
-      let tags: Vec<Tag> = local_snapshot.tags.into_iter().map(tag_from_dto).collect();
+      let local_snapshot = handle.load_snapshot(&user_id).await;
+      let notes: Vec<Note> = local_snapshot.notes.into_iter().map(|dto| note_from_dto(&user_id, dto)).collect();
+      let folders: Vec<Folder> = local_snapshot.folders.into_iter().map(|dto| folder_from_dto(&user_id, dto)).collect();
+      let tags: Vec<Tag> = local_snapshot.tags.into_iter().map(|dto| tag_from_dto(&user_id, dto)).collect();
 
       let next_id = compute_next_id(&notes, &folders, &tags);
       let mut persisted = store.snapshot();
@@ -124,7 +124,7 @@ pub fn use_synced_notes() -> NotesStore {
       }
 
       let device = handle.device_id().await;
-      let mut since = handle.cursor().await;
+      let mut since = handle.cursor(&user_id).await;
       let mut backoff_ms = BASE_BACKOFF_MS;
 
       loop {
@@ -153,12 +153,12 @@ pub fn use_synced_notes() -> NotesStore {
                 client_updated_at_ms: change.server_applied_at_ms,
                 enqueued_at_ms: change.server_applied_at_ms,
               };
-              handle.apply(&queued).await;
-              handle.set_cursor(since).await;
+              handle.apply(&user_id, &queued).await;
+              handle.set_cursor(&user_id, since).await;
 
               if !is_self_echo {
                 let mut snapshot = store.snapshot();
-                merge_server_changes(&mut snapshot, vec![*change]);
+                merge_server_changes(&user_id, &mut snapshot, vec![*change]);
                 store.restore(snapshot);
 
                 let baseline = store.snapshot();
@@ -169,7 +169,7 @@ pub fn use_synced_notes() -> NotesStore {
             }
             SseChangeEvent::CaughtUp { cursor } => {
               since = since.max(cursor);
-              handle.set_cursor(since).await;
+              handle.set_cursor(&user_id, since).await;
             }
           }
         }
@@ -190,6 +190,10 @@ pub fn use_synced_notes() -> NotesStore {
     let is_hydrated = hydrated();
     let is_signed_in = auth.is_signed_in();
     let _ = store.snapshot();
+
+    let Some(user_id) = auth.user.peek().as_ref().map(|user| user.id.clone()) else {
+      return;
+    };
 
     if !is_hydrated || !is_signed_in {
       return;
@@ -224,7 +228,7 @@ pub fn use_synced_notes() -> NotesStore {
       last_synced_folders.set(current.folders);
       last_synced_tags.set(current.tags);
 
-      apply_outbound(handle, changes).await;
+      apply_outbound(handle, user_id, changes).await;
     });
   });
 

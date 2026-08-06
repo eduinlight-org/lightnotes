@@ -1,16 +1,17 @@
 use crate::boot::DISMISS_SPLASH_JS;
-use crate::state::{use_app_i18n, use_persisted_session, use_synced_notes, AuthState, BootState};
+use crate::state::{use_app_i18n, use_persisted_session, use_synced_notes, AuthState, AuthStatus, BootState};
+use crate::Route;
 use dioxus::prelude::*;
 use ui::components::sidebar::use_viewport_resolved;
 
 const SPLASH_TIMEOUT_MS: u32 = 2500;
 
 #[derive(Clone, Copy)]
-pub struct AppShellState {
-  pub signed_in: bool,
+pub struct RootShellState {
+  pub gated: bool,
 }
 
-pub fn use_app_shell() -> AppShellState {
+pub fn use_root_shell() -> RootShellState {
   let boot = use_context_provider(BootState::seed);
   let auth = use_context_provider(AuthState::empty);
   let store = use_synced_notes();
@@ -69,7 +70,29 @@ pub fn use_app_shell() -> AppShellState {
     });
   });
 
-  AppShellState {
-    signed_in: auth.is_signed_in(),
+  let router = router();
+  let mut intended = use_signal(|| None::<Route>);
+
+  use_effect(move || {
+    let status = auth.status();
+    let route = router.current::<Route>();
+    let on_login = matches!(route, Route::Login {});
+
+    if status == AuthStatus::SignedOut && !on_login {
+      intended.set(Some(route));
+      navigator().replace(Route::Login {});
+      return;
+    }
+
+    if status == AuthStatus::SignedIn && on_login {
+      let target = intended.write().take().unwrap_or(Route::Notes {});
+      navigator().replace(target);
+    }
+  });
+
+  let on_login = matches!(use_route::<Route>(), Route::Login {});
+
+  RootShellState {
+    gated: auth.status() != AuthStatus::SignedIn && !on_login,
   }
 }

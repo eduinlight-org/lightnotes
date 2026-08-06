@@ -1,15 +1,17 @@
 use std::sync::Arc;
 
 use api_sdk::ApiClient;
-use dioxus::prelude::*;
 
 use super::use_login_button::LoginButtonState;
-use crate::state::{api_base_url, use_auth};
+use crate::state::{api_base_url, use_auth, use_boot, use_notes};
+use dioxus::prelude::*;
 
 const READY_MARKER: &str = "__ready__";
+const PREFS_POLL_MS: u32 = 20;
 
 const BRIDGE_JS: &str = r#"
 const clientId = await dioxus.recv();
+const locale = await dioxus.recv();
 
 if (!(window.google && window.google.accounts && window.google.accounts.id)) {
   await new Promise((resolve, reject) => {
@@ -45,9 +47,11 @@ if (target) {
   });
   window.google.accounts.id.renderButton(target, {
     theme: 'outline',
-    size: 'medium',
+    size: 'large',
     shape: 'pill',
-    text: 'signin',
+    text: 'signin_with',
+    width: 280,
+    locale,
   });
   dioxus.send('__ready__');
 }
@@ -55,6 +59,8 @@ if (target) {
 
 pub fn use_login_button() -> LoginButtonState {
   let mut auth = use_auth();
+  let store = use_notes();
+  let prefs_ready = use_boot().prefs_ready;
   let mut ready = use_signal(|| false);
   let mut failed = use_signal(|| false);
   let pending = use_signal(|| false);
@@ -68,9 +74,14 @@ pub fn use_login_button() -> LoginButtonState {
         return;
       };
 
+      while !*prefs_ready.peek() {
+        gloo_timers::future::TimeoutFuture::new(PREFS_POLL_MS).await;
+      }
+
       let mut eval = document::eval(BRIDGE_JS);
 
-      if eval.send(config.google_client_id).is_err() {
+      if eval.send(config.google_client_id).is_err() || eval.send(store.language().code()).is_err()
+      {
         failed.set(true);
         return;
       }

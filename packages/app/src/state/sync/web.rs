@@ -68,6 +68,7 @@ pub fn use_synced_notes() -> NotesStore {
     let _auth_generation = auth.generation();
     let signed_in = auth.is_signed_in();
     let tokens = auth.tokens.peek().clone();
+    let user_id = auth.user.peek().as_ref().map(|user| user.id.clone());
 
     if let Some(task) = stream_task.write().take() {
       task.cancel();
@@ -83,10 +84,12 @@ pub fn use_synced_notes() -> NotesStore {
 
     reset_api.set_tokens(tokens);
 
-    if !signed_in {
+    let Some(user_id) = user_id.filter(|_| signed_in) else {
       loaded.set(true);
       return;
-    }
+    };
+
+    store.set_user(user_id.clone());
 
     let stream_api = reset_api.clone();
     let task = spawn(async move {
@@ -111,7 +114,7 @@ pub fn use_synced_notes() -> NotesStore {
 
               if change.device_id != this_device {
                 let mut snapshot = store.snapshot();
-                merge_server_changes(&mut snapshot, vec![*change]);
+                merge_server_changes(&user_id, &mut snapshot, vec![*change]);
                 store.restore(snapshot);
 
                 let baseline = store.snapshot();

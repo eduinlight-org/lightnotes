@@ -247,6 +247,7 @@ auth-not-signed-in = Sin sesión iniciada
 auth-sign-in-failed = Error al iniciar sesión
 auth-signing-in = Esperando al navegador…
 auth-sync-requires-sign-in = La sincronización está pausada hasta que inicies sesión.
+auth-login-subtitle = Inicia sesión con Google para acceder a tus notas en todos tus dispositivos.
 
 settings-about = Acerca de
 settings-version = Versión 0.1.0 · local-first · multiplataforma
