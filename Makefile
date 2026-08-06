@@ -45,7 +45,7 @@ app-windows-bundle:
 	pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/windows-bundle.ps1
 
 app-linux-bundle:
-	dx bundle --package desktop --platform linux --release --package-types appimage --package-types deb --package-types rpm
+	./scripts/linux-bundle.sh
 
 app-android-bundle:
 	./scripts/android-bundle.sh

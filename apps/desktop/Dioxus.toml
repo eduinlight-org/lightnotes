@@ -1,7 +1,16 @@
 [bundle]
 identifier = "dev.lightnotes.desktop"
 publisher = "LightNotes"
-icon = ["icons/icon.png"]
+category = "Productivity"
+short_description = "A fast, local-first notes app"
+icon = [
+  "icons/icon-32.png",
+  "icons/icon-64.png",
+  "icons/icon-128.png",
+  "icons/icon-256.png",
+  "icons/icon-512.png",
+  "icons/icon.png",
+]
 
 [bundle.macos]
 entitlements = "apps/desktop/entitlements.plist"
@@ -27,3 +36,12 @@ upgrade_code = "6e851b49-e3ee-5439-8aa4-8209e2386b03"
 
 [bundle.windows.nsis]
 install_mode = "CurrentUser"
+
+[bundle.deb]
+depends = [
+  "libwebkit2gtk-4.1-0",
+  "libgtk-3-0",
+  "libayatana-appindicator3-1",
+]
+section = "utils"
+priority = "optional"
