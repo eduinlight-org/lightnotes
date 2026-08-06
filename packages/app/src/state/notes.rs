@@ -11,6 +11,7 @@ pub const REMIND_CHOICES: [Option<i64>; 10] =
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Note {
+  pub user_id: String,
   pub id: String,
   pub title: String,
   pub content: String,
@@ -80,6 +81,7 @@ pub enum FolderIcon {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Folder {
+  pub user_id: String,
   pub id: String,
   pub name: String,
   pub icon: FolderIcon,
@@ -91,6 +93,7 @@ pub struct Folder {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tag {
+  pub user_id: String,
   pub id: String,
   pub name: String,
   #[serde(default = "now_ms")]
@@ -152,6 +155,7 @@ fn default_accent() -> String {
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct NotesStore {
+  user_id: Signal<String>,
   notes: Signal<Vec<Note>>,
   folders: Signal<Vec<Folder>>,
   tags: Signal<Vec<Tag>>,
@@ -167,6 +171,7 @@ pub struct NotesStore {
 impl NotesStore {
   pub fn empty() -> Self {
     Self {
+      user_id: Signal::new(String::new()),
       notes: Signal::new(Vec::new()),
       folders: Signal::new(Vec::new()),
       tags: Signal::new(Vec::new()),
@@ -180,6 +185,29 @@ impl NotesStore {
     }
   }
 
+  pub fn user_id(&self) -> String {
+    (self.user_id)()
+  }
+
+  pub fn set_user(&mut self, user_id: String) {
+    self.user_id.set(user_id);
+  }
+
+  fn owned_notes(&self) -> Vec<Note> {
+    let user_id = self.user_id();
+    (self.notes)().into_iter().filter(|note| note.user_id == user_id).collect()
+  }
+
+  fn owned_folders(&self) -> Vec<Folder> {
+    let user_id = self.user_id();
+    (self.folders)().into_iter().filter(|folder| folder.user_id == user_id).collect()
+  }
+
+  fn owned_tags(&self) -> Vec<Tag> {
+    let user_id = self.user_id();
+    (self.tags)().into_iter().filter(|tag| tag.user_id == user_id).collect()
+  }
+
   fn next_id(&mut self) -> u32 {
     let id = (self.next_id)();
     self.next_id.set(id + 1);
@@ -187,19 +215,19 @@ impl NotesStore {
   }
 
   pub fn folders(&self) -> Vec<Folder> {
-    let mut folders = (self.folders)();
+    let mut folders = self.owned_folders();
     folders.sort_by_key(|folder| folder.order);
     folders
   }
 
   pub fn tags(&self) -> Vec<Tag> {
-    let mut tags = (self.tags)();
+    let mut tags = self.owned_tags();
     tags.sort_by_key(|tag| tag.order);
     tags
   }
 
   pub fn tag_name(&self, id: &str) -> Option<String> {
-    (self.tags)().into_iter().find(|tag| tag.id == id).map(|tag| tag.name)
+    self.owned_tags().into_iter().find(|tag| tag.id == id).map(|tag| tag.name)
   }
 
   pub fn filter(&self) -> NoteFilter {
@@ -245,34 +273,36 @@ impl NotesStore {
   }
 
   pub fn note(&self, id: &str) -> Option<Note> {
-    (self.notes)().into_iter().find(|note| note.id == id)
+    self.owned_notes().into_iter().find(|note| note.id == id)
   }
 
   pub fn all_notes(&self) -> Vec<Note> {
-    (self.notes)()
+    self.owned_notes()
   }
 
   pub fn note_count(&self) -> usize {
-    (self.notes)().len()
+    self.owned_notes().len()
   }
 
   pub fn starred_count(&self) -> usize {
-    (self.notes)().iter().filter(|note| note.starred).count()
+    self.owned_notes().iter().filter(|note| note.starred).count()
   }
 
   pub fn pinned_count(&self) -> usize {
-    (self.notes)().iter().filter(|note| note.pinned).count()
+    self.owned_notes().iter().filter(|note| note.pinned).count()
   }
 
   pub fn folder_note_count(&self, folder_id: &str) -> usize {
-    (self.notes)()
+    self
+      .owned_notes()
       .iter()
       .filter(|note| note.folder_id.as_deref() == Some(folder_id))
       .count()
   }
 
   pub fn tag_note_count(&self, tag_id: &str) -> usize {
-    (self.notes)()
+    self
+      .owned_notes()
       .iter()
       .filter(|note| note.tag_ids.iter().any(|id| id == tag_id))
       .count()
@@ -282,7 +312,8 @@ impl NotesStore {
     let filter = self.filter();
     let query = self.search().to_lowercase();
 
-    let mut notes: Vec<Note> = (self.notes)()
+    let mut notes: Vec<Note> = self
+      .owned_notes()
       .into_iter()
       .filter(|note| match &filter {
         NoteFilter::All => true,
@@ -331,13 +362,25 @@ impl NotesStore {
     self.sync.set(next);
   }
 
+  fn with_note<R>(&mut self, id: &str, edit: impl FnOnce(&mut Note) -> R) -> Option<R> {
+    let user_id = self.user_id();
+    self
+      .notes
+      .write()
+      .iter_mut()
+      .find(|note| note.id == id && note.user_id == user_id)
+      .map(edit)
+  }
+
   fn insert_note(&mut self, folder_id: Option<String>, tag_ids: Vec<String>, date_ms: i64) -> String {
     let order = self.next_id() as i64;
     let id = format!("note-{order}");
+    let user_id = self.user_id();
 
     self.notes.write().insert(
       0,
       Note {
+        user_id,
         id: id.clone(),
         title: String::new(),
         content: String::new(),
@@ -374,77 +417,62 @@ impl NotesStore {
 
   fn touch_note(&mut self, id: &str) {
     let order = self.next_id() as i64;
-    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
+    self.with_note(id, |note| {
       note.updated_at_ms = now_ms();
       note.order = order;
-    }
+    });
   }
 
   pub fn set_note_title(&mut self, id: &str, title: String) {
-    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
-      note.title = title;
-    }
+    self.with_note(id, |note| note.title = title);
     self.touch_note(id);
   }
 
   pub fn set_note_content(&mut self, id: &str, content: String) {
-    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
-      note.content = content;
-    }
+    self.with_note(id, |note| note.content = content);
     self.touch_note(id);
   }
 
   pub fn toggle_note_pin(&mut self, id: &str) {
-    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
-      note.pinned = !note.pinned;
-    }
+    self.with_note(id, |note| note.pinned = !note.pinned);
   }
 
   pub fn toggle_note_star(&mut self, id: &str) {
-    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
-      note.starred = !note.starred;
-    }
+    self.with_note(id, |note| note.starred = !note.starred);
   }
 
   pub fn set_note_folder(&mut self, id: &str, folder_id: Option<String>) {
-    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
-      note.folder_id = folder_id;
-    }
+    self.with_note(id, |note| note.folder_id = folder_id);
     self.touch_note(id);
   }
 
   pub fn set_note_date(&mut self, id: &str, date_ms: i64) {
-    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
-      note.date_ms = date_ms;
-    }
+    self.with_note(id, |note| note.date_ms = date_ms);
     self.touch_note(id);
   }
 
   pub fn set_note_remind_before(&mut self, id: &str, remind_before_hours: Option<i64>) {
-    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
-      note.remind_before_hours = remind_before_hours;
-    }
+    self.with_note(id, |note| note.remind_before_hours = remind_before_hours);
     self.touch_note(id);
   }
 
   pub fn add_note_tag(&mut self, id: &str, tag_id: String) {
-    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
+    self.with_note(id, |note| {
       if !note.tag_ids.contains(&tag_id) {
         note.tag_ids.push(tag_id);
       }
-    }
+    });
     self.touch_note(id);
   }
 
   pub fn remove_note_tag(&mut self, id: &str, tag_id: &str) {
-    if let Some(note) = self.notes.write().iter_mut().find(|note| note.id == id) {
-      note.tag_ids.retain(|existing| existing != tag_id);
-    }
+    self.with_note(id, |note| note.tag_ids.retain(|existing| existing != tag_id));
     self.touch_note(id);
   }
 
   pub fn tag_id_for_name(&mut self, name: &str) -> String {
-    let existing = (self.tags)()
+    let existing = self
+      .owned_tags()
       .into_iter()
       .find(|tag| tag.name.eq_ignore_ascii_case(name))
       .map(|tag| tag.id);
@@ -453,34 +481,42 @@ impl NotesStore {
   }
 
   pub fn delete_note(&mut self, id: &str) {
-    self.notes.write().retain(|note| note.id != id);
+    let user_id = self.user_id();
+    self.notes.write().retain(|note| note.id != id || note.user_id != user_id);
   }
 
   pub fn create_folder_with_icon(&mut self, name: String, icon: FolderIcon) -> String {
     let order = self.next_id() as i64;
     let id = format!("folder-{order}");
-    self.folders.write().push(Folder { id: id.clone(), name, icon, updated_at_ms: now_ms(), order });
+    let user_id = self.user_id();
+    self
+      .folders
+      .write()
+      .push(Folder { user_id, id: id.clone(), name, icon, updated_at_ms: now_ms(), order });
     id
   }
 
   pub fn rename_folder(&mut self, folder_id: &str, name: String) {
-    if let Some(folder) = self.folders.write().iter_mut().find(|folder| folder.id == folder_id) {
+    let user_id = self.user_id();
+    if let Some(folder) = self.folders.write().iter_mut().find(|folder| folder.id == folder_id && folder.user_id == user_id) {
       folder.name = name;
       folder.updated_at_ms = now_ms();
     }
   }
 
   pub fn set_folder_icon(&mut self, folder_id: &str, icon: FolderIcon) {
-    if let Some(folder) = self.folders.write().iter_mut().find(|folder| folder.id == folder_id) {
+    let user_id = self.user_id();
+    if let Some(folder) = self.folders.write().iter_mut().find(|folder| folder.id == folder_id && folder.user_id == user_id) {
       folder.icon = icon;
       folder.updated_at_ms = now_ms();
     }
   }
 
   pub fn delete_folder(&mut self, folder_id: &str) {
-    self.folders.write().retain(|folder| folder.id != folder_id);
+    let user_id = self.user_id();
+    self.folders.write().retain(|folder| folder.id != folder_id || folder.user_id != user_id);
     for note in self.notes.write().iter_mut() {
-      if note.folder_id.as_deref() == Some(folder_id) {
+      if note.user_id == user_id && note.folder_id.as_deref() == Some(folder_id) {
         note.folder_id = None;
       }
     }
@@ -491,19 +527,26 @@ impl NotesStore {
 
   pub fn create_tag(&mut self, name: String) -> String {
     let normalized = name.trim().to_lowercase().replace(' ', "-");
-    if let Some(existing) = (self.tags)().into_iter().find(|tag| tag.name == normalized) {
+    if let Some(existing) = self.owned_tags().into_iter().find(|tag| tag.name == normalized) {
       return existing.id;
     }
     let order = self.next_id() as i64;
     let id = format!("tag-{order}");
-    self.tags.write().push(Tag { id: id.clone(), name: normalized, updated_at_ms: now_ms(), order });
+    let user_id = self.user_id();
+    self
+      .tags
+      .write()
+      .push(Tag { user_id, id: id.clone(), name: normalized, updated_at_ms: now_ms(), order });
     id
   }
 
   pub fn delete_tag(&mut self, tag_id: &str) {
-    self.tags.write().retain(|tag| tag.id != tag_id);
+    let user_id = self.user_id();
+    self.tags.write().retain(|tag| tag.id != tag_id || tag.user_id != user_id);
     for note in self.notes.write().iter_mut() {
-      note.tag_ids.retain(|id| id != tag_id);
+      if note.user_id == user_id {
+        note.tag_ids.retain(|id| id != tag_id);
+      }
     }
     if self.filter() == NoteFilter::Tag(tag_id.to_string()) {
       self.set_filter(NoteFilter::All);
@@ -535,6 +578,7 @@ impl NotesStore {
   }
 
   pub fn clear_synced_entities(&mut self) {
+    self.user_id.set(String::new());
     self.notes.set(Vec::new());
     self.folders.set(Vec::new());
     self.tags.set(Vec::new());

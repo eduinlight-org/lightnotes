@@ -76,8 +76,9 @@ pub fn note_to_dto(note: &Note) -> NoteDto {
   }
 }
 
-pub fn note_from_dto(dto: NoteDto) -> Note {
+pub fn note_from_dto(user_id: &str, dto: NoteDto) -> Note {
   Note {
+    user_id: user_id.to_string(),
     id: dto.id,
     title: dto.title,
     content: dto.content,
@@ -102,16 +103,23 @@ pub fn folder_to_dto(folder: &Folder) -> FolderDto {
   }
 }
 
-pub fn folder_from_dto(dto: FolderDto) -> Folder {
-  Folder { id: dto.id, name: dto.name, icon: folder_icon_from_dto(dto.icon), updated_at_ms: dto.updated_at_ms, order: dto.order }
+pub fn folder_from_dto(user_id: &str, dto: FolderDto) -> Folder {
+  Folder {
+    user_id: user_id.to_string(),
+    id: dto.id,
+    name: dto.name,
+    icon: folder_icon_from_dto(dto.icon),
+    updated_at_ms: dto.updated_at_ms,
+    order: dto.order,
+  }
 }
 
 pub fn tag_to_dto(tag: &Tag) -> TagDto {
   TagDto { id: tag.id.clone(), name: tag.name.clone(), updated_at_ms: tag.updated_at_ms, order: tag.order }
 }
 
-pub fn tag_from_dto(dto: TagDto) -> Tag {
-  Tag { id: dto.id, name: dto.name, updated_at_ms: dto.updated_at_ms, order: dto.order }
+pub fn tag_from_dto(user_id: &str, dto: TagDto) -> Tag {
+  Tag { user_id: user_id.to_string(), id: dto.id, name: dto.name, updated_at_ms: dto.updated_at_ms, order: dto.order }
 }
 
 pub fn build_change(
@@ -224,14 +232,20 @@ pub fn compute_next_id(notes: &[Note], folders: &[Folder], tags: &[Tag]) -> u32 
   max_note.max(max_folder).max(max_tag) + 1
 }
 
-pub fn apply_server_changes(notes: &mut Vec<Note>, folders: &mut Vec<Folder>, tags: &mut Vec<Tag>, changes: Vec<ServerChange>) {
+pub fn apply_server_changes(
+  user_id: &str,
+  notes: &mut Vec<Note>,
+  folders: &mut Vec<Folder>,
+  tags: &mut Vec<Tag>,
+  changes: Vec<ServerChange>,
+) {
   for change in changes {
     match change.entity {
       EntityKind::Note => match change.op {
         ChangeOp::Delete => notes.retain(|note| note.id != change.entity_id),
         _ => {
           if let Some(ChangePayload::Note(dto)) = change.payload {
-            let note = note_from_dto(dto);
+            let note = note_from_dto(user_id, dto);
             match notes.iter_mut().find(|existing| existing.id == note.id) {
               Some(existing) => *existing = note,
               None => notes.push(note),
@@ -243,7 +257,7 @@ pub fn apply_server_changes(notes: &mut Vec<Note>, folders: &mut Vec<Folder>, ta
         ChangeOp::Delete => folders.retain(|folder| folder.id != change.entity_id),
         _ => {
           if let Some(ChangePayload::Folder(dto)) = change.payload {
-            let folder = folder_from_dto(dto);
+            let folder = folder_from_dto(user_id, dto);
             match folders.iter_mut().find(|existing| existing.id == folder.id) {
               Some(existing) => *existing = folder,
               None => folders.push(folder),
@@ -255,7 +269,7 @@ pub fn apply_server_changes(notes: &mut Vec<Note>, folders: &mut Vec<Folder>, ta
         ChangeOp::Delete => tags.retain(|tag| tag.id != change.entity_id),
         _ => {
           if let Some(ChangePayload::Tag(dto)) = change.payload {
-            let tag = tag_from_dto(dto);
+            let tag = tag_from_dto(user_id, dto);
             match tags.iter_mut().find(|existing| existing.id == tag.id) {
               Some(existing) => *existing = tag,
               None => tags.push(tag),
@@ -267,8 +281,8 @@ pub fn apply_server_changes(notes: &mut Vec<Note>, folders: &mut Vec<Folder>, ta
   }
 }
 
-pub fn merge_server_changes(snapshot: &mut PersistedState, changes: Vec<ServerChange>) {
-  apply_server_changes(&mut snapshot.notes, &mut snapshot.folders, &mut snapshot.tags, changes);
+pub fn merge_server_changes(user_id: &str, snapshot: &mut PersistedState, changes: Vec<ServerChange>) {
+  apply_server_changes(user_id, &mut snapshot.notes, &mut snapshot.folders, &mut snapshot.tags, changes);
   let next_id = compute_next_id(&snapshot.notes, &snapshot.folders, &snapshot.tags);
   snapshot.next_id = snapshot.next_id.max(next_id);
 }
