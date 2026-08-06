@@ -25,28 +25,28 @@ impl StoreHandle {
     self.cell.get_or_init(|| async { LocalStore::try_connect(&self.db_path).await }).await.as_ref()
   }
 
-  pub async fn load_snapshot(&self) -> LocalSnapshot {
+  pub async fn load_snapshot(&self, user_id: &str) -> LocalSnapshot {
     let Some(store) = self.store().await else {
       return LocalSnapshot::default();
     };
 
-    store.load_snapshot().await
+    store.load_snapshot(user_id).await
   }
 
-  pub async fn apply(&self, change: &QueuedChange) -> ApplyOutcome {
+  pub async fn apply(&self, user_id: &str, change: &QueuedChange) -> ApplyOutcome {
     let Some(store) = self.store().await else {
       return ApplyOutcome::Skipped;
     };
 
-    store.apply(change).await
+    store.apply(user_id, change).await
   }
 
-  pub async fn enqueue_outbound(&self, change: &QueuedChange) {
+  pub async fn enqueue_outbound(&self, user_id: &str, change: &QueuedChange) {
     let Some(store) = self.store().await else {
       return;
     };
 
-    store.enqueue_outbound(change).await
+    store.enqueue_outbound(user_id, change).await
   }
 
   pub async fn device_id(&self) -> String {
@@ -57,8 +57,8 @@ impl StoreHandle {
     store.device_id().await
   }
 
-  pub async fn peek_front_outbound(&self) -> Option<(i64, QueuedChange)> {
-    self.store().await?.peek_front_outbound().await
+  pub async fn peek_front_outbound(&self, user_id: &str) -> Option<(i64, QueuedChange)> {
+    self.store().await?.peek_front_outbound(user_id).await
   }
 
   pub async fn dequeue_front_outbound(&self, id: i64) {
@@ -69,20 +69,20 @@ impl StoreHandle {
     store.dequeue_front_outbound(id).await
   }
 
-  pub async fn cursor(&self) -> i64 {
+  pub async fn cursor(&self, user_id: &str) -> i64 {
     let Some(store) = self.store().await else {
       return 0;
     };
 
-    store.cursor().await
+    store.cursor(user_id).await
   }
 
-  pub async fn set_cursor(&self, cursor: i64) {
+  pub async fn set_cursor(&self, user_id: &str, cursor: i64) {
     let Some(store) = self.store().await else {
       return;
     };
 
-    store.set_cursor(cursor).await
+    store.set_cursor(user_id, cursor).await
   }
 
   pub async fn load_session(&self) -> Option<(String, String)> {
@@ -105,12 +105,12 @@ impl StoreHandle {
     store.clear_session().await
   }
 
-  pub async fn clear_user_data(&self) {
+  pub async fn clear_user_data(&self, user_id: &str) {
     let Some(store) = self.store().await else {
       return;
     };
 
-    store.clear_user_data().await
+    store.clear_user_data(user_id).await
   }
 
   pub fn api(&self) -> Arc<ApiClient> {
@@ -126,7 +126,7 @@ impl StoreHandle {
   }
 }
 
-pub fn use_synced_store(config: StoreConfig, offline: Signal<bool>) -> StoreHandle {
+pub fn use_synced_store(config: StoreConfig, offline: Signal<bool>, active_user: Signal<Option<String>>) -> StoreHandle {
   use_hook(|| {
     info!("local store path: {}", config.db_path.display());
 
@@ -135,7 +135,7 @@ pub fn use_synced_store(config: StoreConfig, offline: Signal<bool>) -> StoreHand
 
     let processor_handle = handle.clone();
     spawn(async move {
-      processor::run(processor_handle, offline).await;
+      processor::run(processor_handle, offline, active_user).await;
     });
 
     handle

@@ -48,10 +48,12 @@ impl LocalStore {
     Some(Self { pool })
   }
 
-  pub async fn load_snapshot(&self) -> LocalSnapshot {
+  pub async fn load_snapshot(&self, user_id: &str) -> LocalSnapshot {
     let note_rows = sqlx::query(
-      "SELECT id, title, content, folder_id, tag_ids, pinned, starred, updated_at_ms, sort_order, date_ms, remind_before_hours FROM notes ORDER BY sort_order DESC",
+      "SELECT id, title, content, folder_id, tag_ids, pinned, starred, updated_at_ms, sort_order, date_ms, remind_before_hours \
+       FROM notes WHERE user_id = ? ORDER BY sort_order DESC",
     )
+      .bind(user_id)
       .fetch_all(&self.pool)
       .await
       .expect("failed to load notes");
@@ -73,7 +75,8 @@ impl LocalStore {
       })
       .collect();
 
-    let folder_rows = sqlx::query("SELECT id, name, icon, updated_at_ms, sort_order FROM folders ORDER BY sort_order ASC")
+    let folder_rows = sqlx::query("SELECT id, name, icon, updated_at_ms, sort_order FROM folders WHERE user_id = ? ORDER BY sort_order ASC")
+      .bind(user_id)
       .fetch_all(&self.pool)
       .await
       .expect("failed to load folders");
@@ -89,7 +92,8 @@ impl LocalStore {
       })
       .collect();
 
-    let tag_rows = sqlx::query("SELECT id, name, updated_at_ms, sort_order FROM tags ORDER BY sort_order ASC")
+    let tag_rows = sqlx::query("SELECT id, name, updated_at_ms, sort_order FROM tags WHERE user_id = ? ORDER BY sort_order ASC")
+      .bind(user_id)
       .fetch_all(&self.pool)
       .await
       .expect("failed to load tags");
@@ -107,8 +111,9 @@ impl LocalStore {
     LocalSnapshot { notes, folders, tags }
   }
 
-  pub async fn apply(&self, change: &QueuedChange) -> ApplyOutcome {
-    let already_applied = sqlx::query("SELECT 1 FROM applied_changes WHERE change_id = ?")
+  pub async fn apply(&self, user_id: &str, change: &QueuedChange) -> ApplyOutcome {
+    let already_applied = sqlx::query("SELECT 1 FROM applied_changes WHERE user_id = ? AND change_id = ?")
+      .bind(user_id)
       .bind(&change.change_id)
       .fetch_optional(&self.pool)
       .await
@@ -120,19 +125,20 @@ impl LocalStore {
     }
 
     let outcome = if change.op == ChangeOp::Delete {
-      self.delete_entity(change.entity, &change.entity_id).await;
+      self.delete_entity(user_id, change.entity, &change.entity_id).await;
       ApplyOutcome::Applied
     } else {
-      let existing_ms = self.existing_updated_at_ms(change.entity, &change.entity_id).await;
+      let existing_ms = self.existing_updated_at_ms(user_id, change.entity, &change.entity_id).await;
       if sync_dto::is_newer_or_equal(existing_ms, change.client_updated_at_ms) {
-        self.upsert_payload(change.payload.as_ref()).await;
+        self.upsert_payload(user_id, change.payload.as_ref()).await;
         ApplyOutcome::Applied
       } else {
         ApplyOutcome::Skipped
       }
     };
 
-    sqlx::query("INSERT INTO applied_changes (change_id) VALUES (?)")
+    sqlx::query("INSERT INTO applied_changes (user_id, change_id) VALUES (?, ?)")
+      .bind(user_id)
       .bind(&change.change_id)
       .execute(&self.pool)
       .await
@@ -141,14 +147,15 @@ impl LocalStore {
     outcome
   }
 
-  async fn existing_updated_at_ms(&self, entity: EntityKind, entity_id: &str) -> Option<i64> {
+  async fn existing_updated_at_ms(&self, user_id: &str, entity: EntityKind, entity_id: &str) -> Option<i64> {
     let query = match entity {
-      EntityKind::Note => "SELECT updated_at_ms FROM notes WHERE id = ?",
-      EntityKind::Folder => "SELECT updated_at_ms FROM folders WHERE id = ?",
-      EntityKind::Tag => "SELECT updated_at_ms FROM tags WHERE id = ?",
+      EntityKind::Note => "SELECT updated_at_ms FROM notes WHERE user_id = ? AND id = ?",
+      EntityKind::Folder => "SELECT updated_at_ms FROM folders WHERE user_id = ? AND id = ?",
+      EntityKind::Tag => "SELECT updated_at_ms FROM tags WHERE user_id = ? AND id = ?",
     };
 
     sqlx::query(query)
+      .bind(user_id)
       .bind(entity_id)
       .fetch_optional(&self.pool)
       .await
@@ -156,36 +163,42 @@ impl LocalStore {
       .map(|row| row.get("updated_at_ms"))
   }
 
-  async fn delete_entity(&self, entity: EntityKind, entity_id: &str) {
+  async fn delete_entity(&self, user_id: &str, entity: EntityKind, entity_id: &str) {
     let query = match entity {
-      EntityKind::Note => "DELETE FROM notes WHERE id = ?",
-      EntityKind::Folder => "DELETE FROM folders WHERE id = ?",
-      EntityKind::Tag => "DELETE FROM tags WHERE id = ?",
+      EntityKind::Note => "DELETE FROM notes WHERE user_id = ? AND id = ?",
+      EntityKind::Folder => "DELETE FROM folders WHERE user_id = ? AND id = ?",
+      EntityKind::Tag => "DELETE FROM tags WHERE user_id = ? AND id = ?",
     };
 
-    sqlx::query(query).bind(entity_id).execute(&self.pool).await.expect("failed to delete entity");
+    sqlx::query(query)
+      .bind(user_id)
+      .bind(entity_id)
+      .execute(&self.pool)
+      .await
+      .expect("failed to delete entity");
   }
 
-  async fn upsert_payload(&self, payload: Option<&ChangePayload>) {
+  async fn upsert_payload(&self, user_id: &str, payload: Option<&ChangePayload>) {
     match payload {
-      Some(ChangePayload::Note(note)) => self.upsert_note(note).await,
-      Some(ChangePayload::Folder(folder)) => self.upsert_folder(folder).await,
-      Some(ChangePayload::Tag(tag)) => self.upsert_tag(tag).await,
+      Some(ChangePayload::Note(note)) => self.upsert_note(user_id, note).await,
+      Some(ChangePayload::Folder(folder)) => self.upsert_folder(user_id, folder).await,
+      Some(ChangePayload::Tag(tag)) => self.upsert_tag(user_id, tag).await,
       None => {}
     }
   }
 
-  async fn upsert_note(&self, note: &NoteDto) {
+  async fn upsert_note(&self, user_id: &str, note: &NoteDto) {
     let tag_ids = serde_json::to_string(&note.tag_ids).unwrap_or_else(|_| "[]".to_string());
 
     sqlx::query(
-      "INSERT INTO notes (id, title, content, folder_id, tag_ids, pinned, starred, updated_at_ms, sort_order, date_ms, remind_before_hours) \
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
-       ON CONFLICT(id) DO UPDATE SET title = excluded.title, content = excluded.content, folder_id = excluded.folder_id, \
+      "INSERT INTO notes (user_id, id, title, content, folder_id, tag_ids, pinned, starred, updated_at_ms, sort_order, date_ms, remind_before_hours) \
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
+       ON CONFLICT(user_id, id) DO UPDATE SET title = excluded.title, content = excluded.content, folder_id = excluded.folder_id, \
        tag_ids = excluded.tag_ids, pinned = excluded.pinned, starred = excluded.starred, \
        updated_at_ms = excluded.updated_at_ms, sort_order = excluded.sort_order, \
        date_ms = excluded.date_ms, remind_before_hours = excluded.remind_before_hours",
     )
+    .bind(user_id)
     .bind(&note.id)
     .bind(&note.title)
     .bind(&note.content)
@@ -202,13 +215,14 @@ impl LocalStore {
     .expect("failed to upsert note");
   }
 
-  async fn upsert_folder(&self, folder: &FolderDto) {
+  async fn upsert_folder(&self, user_id: &str, folder: &FolderDto) {
     let icon = serde_json::to_string(&folder.icon).unwrap_or_else(|_| "\"Inbox\"".to_string());
 
     sqlx::query(
-      "INSERT INTO folders (id, name, icon, updated_at_ms, sort_order) VALUES (?, ?, ?, ?, ?) \
-       ON CONFLICT(id) DO UPDATE SET name = excluded.name, icon = excluded.icon, updated_at_ms = excluded.updated_at_ms, sort_order = excluded.sort_order",
+      "INSERT INTO folders (user_id, id, name, icon, updated_at_ms, sort_order) VALUES (?, ?, ?, ?, ?, ?) \
+       ON CONFLICT(user_id, id) DO UPDATE SET name = excluded.name, icon = excluded.icon, updated_at_ms = excluded.updated_at_ms, sort_order = excluded.sort_order",
     )
+    .bind(user_id)
     .bind(&folder.id)
     .bind(&folder.name)
     .bind(icon)
@@ -219,11 +233,12 @@ impl LocalStore {
     .expect("failed to upsert folder");
   }
 
-  async fn upsert_tag(&self, tag: &TagDto) {
+  async fn upsert_tag(&self, user_id: &str, tag: &TagDto) {
     sqlx::query(
-      "INSERT INTO tags (id, name, updated_at_ms, sort_order) VALUES (?, ?, ?, ?) \
-       ON CONFLICT(id) DO UPDATE SET name = excluded.name, updated_at_ms = excluded.updated_at_ms, sort_order = excluded.sort_order",
+      "INSERT INTO tags (user_id, id, name, updated_at_ms, sort_order) VALUES (?, ?, ?, ?, ?) \
+       ON CONFLICT(user_id, id) DO UPDATE SET name = excluded.name, updated_at_ms = excluded.updated_at_ms, sort_order = excluded.sort_order",
     )
+    .bind(user_id)
     .bind(&tag.id)
     .bind(&tag.name)
     .bind(tag.updated_at_ms)
@@ -233,10 +248,11 @@ impl LocalStore {
     .expect("failed to upsert tag");
   }
 
-  pub async fn enqueue_outbound(&self, change: &QueuedChange) {
+  pub async fn enqueue_outbound(&self, user_id: &str, change: &QueuedChange) {
     let change_json = serde_json::to_string(change).expect("failed to serialize queued change");
 
-    sqlx::query("INSERT INTO outbound_queue (change_json, enqueued_at_ms) VALUES (?, ?)")
+    sqlx::query("INSERT INTO outbound_queue (user_id, change_json, enqueued_at_ms) VALUES (?, ?, ?)")
+      .bind(user_id)
       .bind(change_json)
       .bind(change.enqueued_at_ms)
       .execute(&self.pool)
@@ -244,8 +260,9 @@ impl LocalStore {
       .expect("failed to enqueue outbound change");
   }
 
-  pub async fn peek_front_outbound(&self) -> Option<(i64, QueuedChange)> {
-    let row = sqlx::query("SELECT id, change_json FROM outbound_queue ORDER BY id ASC LIMIT 1")
+  pub async fn peek_front_outbound(&self, user_id: &str) -> Option<(i64, QueuedChange)> {
+    let row = sqlx::query("SELECT id, change_json FROM outbound_queue WHERE user_id = ? ORDER BY id ASC LIMIT 1")
+      .bind(user_id)
       .fetch_optional(&self.pool)
       .await
       .expect("failed to peek outbound queue")?;
@@ -265,8 +282,9 @@ impl LocalStore {
       .expect("failed to dequeue outbound change");
   }
 
-  pub async fn cursor(&self) -> i64 {
-    sqlx::query("SELECT cursor FROM sync_cursor WHERE id = 0")
+  pub async fn cursor(&self, user_id: &str) -> i64 {
+    sqlx::query("SELECT cursor FROM sync_cursor WHERE user_id = ?")
+      .bind(user_id)
       .fetch_optional(&self.pool)
       .await
       .expect("failed to query sync cursor")
@@ -274,8 +292,9 @@ impl LocalStore {
       .unwrap_or(0)
   }
 
-  pub async fn set_cursor(&self, cursor: i64) {
-    sqlx::query("INSERT INTO sync_cursor (id, cursor) VALUES (0, ?) ON CONFLICT(id) DO UPDATE SET cursor = excluded.cursor")
+  pub async fn set_cursor(&self, user_id: &str, cursor: i64) {
+    sqlx::query("INSERT INTO sync_cursor (user_id, cursor) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET cursor = excluded.cursor")
+      .bind(user_id)
       .bind(cursor)
       .execute(&self.pool)
       .await
@@ -326,16 +345,17 @@ impl LocalStore {
       .expect("failed to clear session");
   }
 
-  pub async fn clear_user_data(&self) {
+  pub async fn clear_user_data(&self, user_id: &str) {
     for statement in [
-      "DELETE FROM notes",
-      "DELETE FROM folders",
-      "DELETE FROM tags",
-      "DELETE FROM outbound_queue",
-      "DELETE FROM applied_changes",
-      "DELETE FROM sync_cursor",
+      "DELETE FROM notes WHERE user_id = ?",
+      "DELETE FROM folders WHERE user_id = ?",
+      "DELETE FROM tags WHERE user_id = ?",
+      "DELETE FROM outbound_queue WHERE user_id = ?",
+      "DELETE FROM applied_changes WHERE user_id = ?",
+      "DELETE FROM sync_cursor WHERE user_id = ?",
     ] {
       sqlx::query(statement)
+        .bind(user_id)
         .execute(&self.pool)
         .await
         .expect("failed to clear local user data");
@@ -379,12 +399,12 @@ mod tests {
     let db_path = dir.join("nested").join("lightnotes.db");
 
     let store = LocalStore::try_connect(&db_path).await.expect("first connect");
-    store.apply(&note_change("note-1", "offline note", 1_000)).await;
-    assert_eq!(store.load_snapshot().await.notes.len(), 1);
+    store.apply("user-1", &note_change("note-1", "offline note", 1_000)).await;
+    assert_eq!(store.load_snapshot("user-1").await.notes.len(), 1);
     drop(store);
 
     let reopened = LocalStore::try_connect(&db_path).await.expect("second connect");
-    let snapshot = reopened.load_snapshot().await;
+    let snapshot = reopened.load_snapshot("user-1").await;
 
     assert_eq!(snapshot.notes.len(), 1);
     assert_eq!(snapshot.notes[0].title, "offline note");
@@ -398,16 +418,16 @@ mod tests {
     let db_path = dir.join("lightnotes.db");
 
     let store = LocalStore::try_connect(&db_path).await.expect("first connect");
-    store.enqueue_outbound(&note_change("note-1", "offline note", 1_000)).await;
+    store.enqueue_outbound("user-1", &note_change("note-1", "offline note", 1_000)).await;
     drop(store);
 
     let reopened = LocalStore::try_connect(&db_path).await.expect("second connect");
-    let (row_id, change) = reopened.peek_front_outbound().await.expect("queued change survived");
+    let (row_id, change) = reopened.peek_front_outbound("user-1").await.expect("queued change survived");
 
     assert_eq!(change.entity_id, "note-1");
 
     reopened.dequeue_front_outbound(row_id).await;
-    assert!(reopened.peek_front_outbound().await.is_none());
+    assert!(reopened.peek_front_outbound("user-1").await.is_none());
 
     std::fs::remove_dir_all(&dir).ok();
   }
@@ -418,22 +438,79 @@ mod tests {
     let db_path = dir.join("lightnotes.db");
 
     let store = LocalStore::try_connect(&db_path).await.expect("connect");
-    store.apply(&note_change("note-1", "mine", 1_000)).await;
-    store.enqueue_outbound(&note_change("note-2", "queued", 2_000)).await;
-    store.set_cursor(42).await;
+    store.apply("user-1", &note_change("note-1", "mine", 1_000)).await;
+    store.enqueue_outbound("user-1", &note_change("note-2", "queued", 2_000)).await;
+    store.set_cursor("user-1", 42).await;
     store.save_session("user-1", "{}", 1_000).await;
     let device = store.device_id().await;
 
-    store.clear_user_data().await;
+    store.clear_user_data("user-1").await;
 
-    assert!(store.load_snapshot().await.notes.is_empty());
-    assert!(store.peek_front_outbound().await.is_none());
-    assert_eq!(store.cursor().await, 0);
+    assert!(store.load_snapshot("user-1").await.notes.is_empty());
+    assert!(store.peek_front_outbound("user-1").await.is_none());
+    assert_eq!(store.cursor("user-1").await, 0);
     assert_eq!(store.device_id().await, device);
     assert_eq!(store.load_session().await.map(|(id, _)| id), Some("user-1".to_string()));
 
     store.clear_session().await;
     assert!(store.load_session().await.is_none());
+
+    std::fs::remove_dir_all(&dir).ok();
+  }
+
+  #[tokio::test]
+  async fn two_users_keep_separate_notes_under_the_same_entity_id() {
+    let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
+    let db_path = dir.join("lightnotes.db");
+
+    let store = LocalStore::try_connect(&db_path).await.expect("connect");
+    store.apply("user-a", &note_change("note-1", "belongs to a", 1_000)).await;
+    store.apply("user-b", &note_change("note-1", "belongs to b", 1_000)).await;
+
+    let a = store.load_snapshot("user-a").await;
+    let b = store.load_snapshot("user-b").await;
+
+    assert_eq!(a.notes.len(), 1);
+    assert_eq!(a.notes[0].title, "belongs to a");
+    assert_eq!(b.notes.len(), 1);
+    assert_eq!(b.notes[0].title, "belongs to b");
+
+    store.clear_user_data("user-a").await;
+
+    assert!(store.load_snapshot("user-a").await.notes.is_empty());
+    assert_eq!(store.load_snapshot("user-b").await.notes.len(), 1);
+
+    std::fs::remove_dir_all(&dir).ok();
+  }
+
+  #[tokio::test]
+  async fn queued_changes_are_only_visible_to_their_own_user() {
+    let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
+    let db_path = dir.join("lightnotes.db");
+
+    let store = LocalStore::try_connect(&db_path).await.expect("connect");
+    store.enqueue_outbound("user-a", &note_change("note-1", "a is offline", 1_000)).await;
+
+    assert!(store.peek_front_outbound("user-b").await.is_none());
+
+    let (_, change) = store.peek_front_outbound("user-a").await.expect("a still has its change");
+    assert_eq!(change.entity_id, "note-1");
+
+    std::fs::remove_dir_all(&dir).ok();
+  }
+
+  #[tokio::test]
+  async fn sync_cursors_are_tracked_per_user() {
+    let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
+    let db_path = dir.join("lightnotes.db");
+
+    let store = LocalStore::try_connect(&db_path).await.expect("connect");
+    store.set_cursor("user-a", 42).await;
+    store.set_cursor("user-b", 7).await;
+
+    assert_eq!(store.cursor("user-a").await, 42);
+    assert_eq!(store.cursor("user-b").await, 7);
+    assert_eq!(store.cursor("user-c").await, 0);
 
     std::fs::remove_dir_all(&dir).ok();
   }
