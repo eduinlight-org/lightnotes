@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   version:
-    runs-on: [self-hosted, homelab]
+    runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.resolve.outputs.version }}
       prerelease: ${{ steps.resolve.outputs.prerelease }}
@@ -96,7 +96,7 @@ jobs:
   release:
     needs: [version, macos, windows, linux]
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: [self-hosted, homelab]
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
