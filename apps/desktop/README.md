@@ -187,13 +187,15 @@ sudo apt-get install -y --no-install-recommends \
   librsvg2-dev libxdo-dev libssl-dev
 ```
 
-Nothing else is needed. `dx` downloads `linuxdeploy` itself for the AppImage, and builds the RPM through a Rust crate rather than shelling out to `rpmbuild`. The AppImage step runs `linuxdeploy` in extract-and-run mode, so **FUSE is not required** — which is what lets the whole thing work inside a container.
+Nothing else is needed. `dx` downloads `linuxdeploy` itself for the AppImage, and builds the RPM through a Rust crate rather than shelling out to `rpmbuild`. The AppImage step runs `linuxdeploy` in extract-and-run mode, so **FUSE is not required**.
+
+CI does not run that command — the self-hosted runner is itself a container built from `ubuntu:22.04` with these packages already baked in, so the workflow has no dependency-install step at all. See `/opt/gh-runner-docker` on the runner host.
 
 ### glibc floor
 
-CI builds inside an `ubuntu:22.04` container. Binaries link against the glibc they were built on and cannot run on anything older, so building directly on the host would tie our floor to whatever the runner happens to be.
+Binaries link against the glibc they were built on and cannot run on anything older, so the build environment decides how old a distro we support.
 
-22.04 gives a **glibc 2.35** floor, which covers Ubuntu 22.04+, Debian 12+, and current Fedora. Pinning it in a container also means the floor is a deliberate choice recorded in the workflow, rather than a side effect of the host image.
+The floor is pinned at **glibc 2.35** by the runner image being `ubuntu:22.04`, which covers Ubuntu 22.04+, Debian 12+, and current Fedora. This matters: the runner *host* is Debian 12 with glibc 2.36, so building on the host directly would silently raise the floor and drop Ubuntu 22.04 users.
 
 ### Desktop integration
 
@@ -205,7 +207,7 @@ The `.deb` declares its runtime dependencies (`libwebkit2gtk-4.1-0`, `libgtk-3-0
 
 ### CI
 
-`.github/workflows/release-desktop-linux.yml` runs on the `[self-hosted, homelab]` runner, inside the 22.04 container, calling the same script. It is triggered by `workflow_call` from the umbrella release workflow, and by `workflow_dispatch` for manual runs.
+`.github/workflows/release-desktop-linux.yml` runs on the `[self-hosted, homelab]` runner, calling the same script. It is triggered by `workflow_call` from the umbrella release workflow, and by `workflow_dispatch` for manual runs.
 
 The macOS and Windows workflows stay on GitHub-hosted runners — the homelab runner is Linux X64, so it cannot build them.
 
