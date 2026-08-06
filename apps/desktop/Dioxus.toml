@@ -6,3 +6,24 @@ icon = ["icons/icon.png"]
 [bundle.macos]
 entitlements = "apps/desktop/entitlements.plist"
 minimum_system_version = "10.15"
+
+[bundle.windows]
+webview_install_mode = { OfflineInstaller = { silent = true } }
+
+[bundle.windows.sign_command]
+cmd = "powershell"
+args = [
+  "-NoProfile",
+  "-ExecutionPolicy",
+  "Bypass",
+  "-File",
+  "scripts/windows-sign.ps1",
+  "-Path",
+  "%1",
+]
+
+[bundle.windows.wix]
+upgrade_code = "6e851b49-e3ee-5439-8aa4-8209e2386b03"
+
+[bundle.windows.nsis]
+install_mode = "CurrentUser"

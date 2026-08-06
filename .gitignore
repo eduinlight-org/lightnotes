@@ -15,5 +15,5 @@ apps/*/assets/tailwind.css
 # API log files (production)
 /logs
 
-# Release bundles produced by scripts/*-bundle.sh
+# Release bundles produced by scripts/*-bundle.*
 /dist
