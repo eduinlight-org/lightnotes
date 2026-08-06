@@ -1,0 +1,87 @@
+name: Release desktop (macOS)
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version stamped into the artifact names, without the leading v"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version stamped into the artifact names, without the leading v"
+        required: false
+        type: string
+        default: "dev"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-desktop-macos-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DIOXUS_CLI_VERSION: "0.7.9"
+  API_BASE_URL: https://api-lightnotes.eduindev.com
+
+jobs:
+  bundle:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: aarch64
+            target: aarch64-apple-darwin
+          - arch: x86_64
+            target: x86_64-apple-darwin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: desktop-macos-${{ matrix.target }}
+
+      - name: Cache dioxus-cli
+        id: cache-dx
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/dx
+          key: dioxus-cli-${{ runner.os }}-${{ env.DIOXUS_CLI_VERSION }}
+
+      - name: Install dioxus-cli
+        if: steps.cache-dx.outputs.cache-hit != 'true'
+        run: cargo install dioxus-cli --version ${{ env.DIOXUS_CLI_VERSION }} --locked
+
+      - name: Bundle
+        env:
+          VERSION: ${{ inputs.version || 'dev' }}
+          ARCH: ${{ matrix.arch }}
+          TARGET: ${{ matrix.target }}
+          OUT_DIR: ${{ github.workspace }}/dist/macos
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: ./scripts/macos-bundle.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos-${{ matrix.arch }}
+          path: |
+            dist/macos/*.dmg
+            dist/macos/*.app.zip
+          if-no-files-found: error
+          retention-days: 7

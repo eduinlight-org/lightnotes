@@ -39,7 +39,7 @@ app-web-bundle:
 	dx bundle --package web --platform web --fullstack true --release
 
 app-macos-bundle:
-	dx bundle --package desktop --platform macos --release --package-types macos --package-types dmg
+	./scripts/macos-bundle.sh
 
 app-windows-bundle:
 	pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/windows-bundle.ps1
