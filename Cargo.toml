@@ -26,6 +26,11 @@ default-members = [
     "apps/landing",
 ]
 
+[profile.wasm-release]
+inherits = "release"
+debug = false
+strip = "debuginfo"
+
 [workspace.dependencies]
 dioxus = { version = "0.7.1" }
 dioxus-i18n = { version = "0.5.1" }
