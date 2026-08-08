@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 
 use dioxus::logger::tracing::warn;
 
-use super::{Notification, Permission, ScheduleAction, SchedulerSupport};
+use super::{Notification, Permission};
 
 static SENDER: OnceLock<Option<Sender<Notification>>> = OnceLock::new();
 static DELIVERY_REFUSED: AtomicBool = AtomicBool::new(false);
@@ -46,23 +46,9 @@ pub fn notify_now(notification: Notification) {
   }
 }
 
-pub async fn support() -> SchedulerSupport {
-  SchedulerSupport { background: false, permission: permission() }
-}
-
-pub async fn request_permission() -> Permission {
-  permission()
-}
-
-fn permission() -> Permission {
+pub fn delivery_permission() -> Permission {
   match DELIVERY_REFUSED.load(Ordering::Relaxed) {
     true => Permission::Denied,
     false => Permission::Granted,
   }
 }
-
-pub async fn apply(_actions: Vec<ScheduleAction>) -> Vec<ScheduleAction> {
-  Vec::new()
-}
-
-pub async fn clear_all() {}

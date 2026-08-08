@@ -5,11 +5,11 @@ use dioxus::prelude::*;
 use dioxus_i18n::t;
 use store_sdk::{ReminderSchedule, StoreHandle};
 
-use super::plan::{desired_reminders, diff, due_reminders, ScheduledRecord, CATCH_UP_WINDOW_MS, MAX_SCHEDULED};
+use super::plan::{desired_reminders, diff, due_notes, ScheduledRecord, CATCH_UP_WINDOW_MS, MAX_SCHEDULED};
 use crate::state::i18n::format_absolute;
 use crate::state::notes::now_ms;
 use crate::state::scheduler::{self, Notification, ScheduleAction, ScheduledReminder, SchedulerSupport};
-use crate::state::{date_math, local_now_ms, use_boot, NotesStore};
+use crate::state::{date_math, local_now_ms, use_boot, Note, NotesStore};
 
 const RECONCILE_DEBOUNCE_MS: u64 = 1_000;
 const TICK_MS: u64 = 30_000;
@@ -25,11 +25,11 @@ fn notification_title(raw_title: &str, titles_visible: bool) -> String {
   }
 }
 
-fn notification_for(reminder: &ScheduledReminder, titles_visible: bool) -> Notification {
-  Notification {
-    title: notification_title(&reminder.title, titles_visible),
-    body: t!("reminder-notification-body", when: format_absolute(reminder.fire_at_local_ms)),
-  }
+fn notification_payload(note: &Note, fire_at_local_ms: i64, titles_visible: bool) -> (String, String) {
+  (
+    notification_title(&note.title, titles_visible),
+    t!("reminder-notification-body", when: format_absolute(fire_at_local_ms)),
+  )
 }
 
 fn record_of(schedule: ReminderSchedule) -> ScheduledRecord {
@@ -69,7 +69,7 @@ pub fn use_reminders(store: NotesStore) {
   let boot = use_boot();
   let mut support = use_signal(SchedulerSupport::default);
   let mut generation = use_signal(|| 0u64);
-  let mut pending = use_signal(Vec::<ScheduledReminder>::new);
+  let mut pending = use_signal(Vec::<(Note, i64)>::new);
 
   use_hook(move || {
     spawn(async move {
@@ -97,8 +97,8 @@ pub fn use_reminders(store: NotesStore) {
 
     let desired = match enabled && !user_id.is_empty() {
       false => Vec::new(),
-      true => desired_reminders(&store.peek_notes(), local_now_ms(), MAX_SCHEDULED, |note| {
-        notification_title(&note.title, titles_visible)
+      true => desired_reminders(&store.peek_notes(), local_now_ms(), MAX_SCHEDULED, |note, fire_at_local_ms| {
+        notification_payload(note, fire_at_local_ms, titles_visible)
       }),
     };
 
@@ -135,17 +135,11 @@ pub fn use_reminders(store: NotesStore) {
           continue;
         }
 
-        let due = due_reminders(
-          &store.peek_notes(),
-          now_ms(),
-          date_math::local_offset_ms(),
-          CATCH_UP_WINDOW_MS,
-          |note| note.title.clone(),
-        );
+        let due = due_notes(&store.peek_notes(), now_ms(), date_math::local_offset_ms(), CATCH_UP_WINDOW_MS);
 
-        let fresh: Vec<ScheduledReminder> = due
+        let fresh: Vec<(Note, i64)> = due
           .into_iter()
-          .filter(|reminder| delivered.insert((reminder.note_id.clone(), reminder.fire_at_local_ms)))
+          .filter(|(note, fire_at_local_ms)| delivered.insert((note.id.clone(), *fire_at_local_ms)))
           .collect();
 
         if !fresh.is_empty() {
@@ -162,8 +156,9 @@ pub fn use_reminders(store: NotesStore) {
       return;
     }
 
-    for reminder in std::mem::take(&mut *pending.write()) {
-      scheduler::notify_now(notification_for(&reminder, titles_visible));
+    for (note, fire_at_local_ms) in std::mem::take(&mut *pending.write()) {
+      let (title, body) = notification_payload(&note, fire_at_local_ms, titles_visible);
+      scheduler::notify_now(Notification { title, body });
     }
   });
 }

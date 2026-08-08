@@ -16,37 +16,39 @@ pub fn fire_at_local_ms(date_ms: i64, remind_before_hours: i64) -> i64 {
   date_ms - remind_before_hours * MS_PER_HOUR
 }
 
-pub fn payload_hash(title: &str) -> String {
+pub fn payload_hash(title: &str, body: &str) -> String {
   let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-  for byte in title.as_bytes() {
+  for byte in title.as_bytes().iter().chain(b"\x1f").chain(body.as_bytes()) {
     hash ^= *byte as u64;
     hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
   }
   format!("{hash:016x}")
 }
 
-fn reminder_for<F>(note: &Note, title_for: &F) -> Option<ScheduledReminder>
+fn reminder_for<F>(note: &Note, payload_for: &F) -> Option<ScheduledReminder>
 where
-  F: Fn(&Note) -> String,
+  F: Fn(&Note, i64) -> (String, String),
 {
   let hours = note.remind_before_hours?;
-  let title = title_for(note);
+  let fire_at_local_ms = fire_at_local_ms(note.date_ms, hours);
+  let (title, body) = payload_for(note, fire_at_local_ms);
 
   Some(ScheduledReminder {
     note_id: note.id.clone(),
-    fire_at_local_ms: fire_at_local_ms(note.date_ms, hours),
-    payload_hash: payload_hash(&title),
+    fire_at_local_ms,
+    payload_hash: payload_hash(&title, &body),
     title,
+    body,
   })
 }
 
-pub fn desired_reminders<F>(notes: &[Note], now_local_ms: i64, max: usize, title_for: F) -> Vec<ScheduledReminder>
+pub fn desired_reminders<F>(notes: &[Note], now_local_ms: i64, max: usize, payload_for: F) -> Vec<ScheduledReminder>
 where
-  F: Fn(&Note) -> String,
+  F: Fn(&Note, i64) -> (String, String),
 {
   let mut reminders: Vec<ScheduledReminder> = notes
     .iter()
-    .filter_map(|note| reminder_for(note, &title_for))
+    .filter_map(|note| reminder_for(note, &payload_for))
     .filter(|reminder| reminder.fire_at_local_ms > now_local_ms)
     .collect();
 
@@ -55,17 +57,15 @@ where
   reminders
 }
 
-pub fn due_reminders<F>(notes: &[Note], now_utc_ms: i64, local_offset_ms: i64, catch_up_ms: i64, title_for: F) -> Vec<ScheduledReminder>
-where
-  F: Fn(&Note) -> String,
-{
+pub fn due_notes(notes: &[Note], now_utc_ms: i64, local_offset_ms: i64, catch_up_ms: i64) -> Vec<(Note, i64)> {
   notes
     .iter()
-    .filter_map(|note| reminder_for(note, &title_for))
-    .filter(|reminder| {
-      let lateness = now_utc_ms - (reminder.fire_at_local_ms - local_offset_ms);
+    .filter_map(|note| Some((note, fire_at_local_ms(note.date_ms, note.remind_before_hours?))))
+    .filter(|(_, fire_at_local_ms)| {
+      let lateness = now_utc_ms - (fire_at_local_ms - local_offset_ms);
       (0..=catch_up_ms).contains(&lateness)
     })
+    .map(|(note, fire_at_local_ms)| (note.clone(), fire_at_local_ms))
     .collect()
 }
 
@@ -115,8 +115,8 @@ mod tests {
     }
   }
 
-  fn titles(note: &Note) -> String {
-    note.title.clone()
+  fn titles(note: &Note, _fire_at_local_ms: i64) -> (String, String) {
+    (note.title.clone(), "due".to_string())
   }
 
   fn record(reminder: &ScheduledReminder) -> ScheduledRecord {
@@ -175,8 +175,8 @@ mod tests {
     let offset = -5 * MS_PER_HOUR;
     let notes = [note("note-1", fire_at_local, Some(0))];
 
-    let at_nine_utc = due_reminders(&notes, fire_at_local, offset, CATCH_UP_WINDOW_MS, titles);
-    let at_two_utc = due_reminders(&notes, fire_at_local + 5 * MS_PER_HOUR, offset, CATCH_UP_WINDOW_MS, titles);
+    let at_nine_utc = due_notes(&notes, fire_at_local, offset, CATCH_UP_WINDOW_MS);
+    let at_two_utc = due_notes(&notes, fire_at_local + 5 * MS_PER_HOUR, offset, CATCH_UP_WINDOW_MS);
 
     assert!(at_nine_utc.is_empty());
     assert_eq!(at_two_utc.len(), 1);
@@ -186,7 +186,7 @@ mod tests {
   fn the_catch_up_window_is_inclusive_at_both_ends() {
     let fire_at = ymdhm_to_date_ms(2026, 8, 8, 9, 0);
     let notes = [note("note-1", fire_at, Some(0))];
-    let due_at = |now| due_reminders(&notes, now, 0, CATCH_UP_WINDOW_MS, titles).len();
+    let due_at = |now| due_notes(&notes, now, 0, CATCH_UP_WINDOW_MS).len();
 
     assert_eq!(due_at(fire_at - 1), 0);
     assert_eq!(due_at(fire_at), 1);
@@ -212,7 +212,7 @@ mod tests {
     let current = vec![ScheduledRecord {
       note_id: "note-1".into(),
       fire_at_local_ms: now + MS_PER_HOUR,
-      payload_hash: payload_hash("note-1 title"),
+      payload_hash: payload_hash("note-1 title", "due"),
     }];
 
     let actions = diff(&desired, &current);
@@ -230,7 +230,7 @@ mod tests {
     let current = vec![ScheduledRecord {
       note_id: "note-1".into(),
       fire_at_local_ms: now + MS_PER_HOUR,
-      payload_hash: payload_hash("note-1 title"),
+      payload_hash: payload_hash("note-1 title", "due"),
     }];
 
     assert_eq!(diff(&desired, &current).len(), 1);
@@ -255,7 +255,7 @@ mod tests {
     let notes = [note("note-1", now + MS_PER_HOUR, Some(0))];
     let current: Vec<ScheduledRecord> = desired_reminders(&notes, now, MAX_SCHEDULED, titles).iter().map(record).collect();
 
-    let hidden = desired_reminders(&notes, now, MAX_SCHEDULED, |_| "You have a reminder".to_string());
+    let hidden = desired_reminders(&notes, now, MAX_SCHEDULED, |_, _| ("You have a reminder".to_string(), "due".to_string()));
 
     assert_eq!(diff(&hidden, &current).len(), 1);
   }

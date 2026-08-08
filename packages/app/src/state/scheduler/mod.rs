@@ -11,6 +11,7 @@ pub struct ScheduledReminder {
   pub note_id: String,
   pub fire_at_local_ms: i64,
   pub title: String,
+  pub body: String,
   pub payload_hash: String,
 }
 
@@ -37,9 +38,19 @@ pub struct SchedulerSupport {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
-mod desktop;
+mod notify;
 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
-pub use desktop::{apply, clear_all, notify_now, request_permission, support};
+pub use notify::notify_now;
+
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "macos")]
+pub use macos::{apply, clear_all, request_permission, support};
+
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+mod fallback;
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+pub use fallback::{apply, clear_all, request_permission, support};
 
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
 mod unsupported;
