@@ -9,6 +9,7 @@ use futures_util::Stream;
 use tokio::sync::OnceCell;
 
 use crate::config::StoreConfig;
+use crate::db_key;
 use crate::local_store::{ApplyOutcome, LocalSnapshot, LocalStore};
 use crate::processor;
 use sync_dto::QueuedChange;
@@ -22,7 +23,15 @@ pub struct StoreHandle {
 
 impl StoreHandle {
   async fn store(&self) -> Option<&LocalStore> {
-    self.cell.get_or_init(|| async { LocalStore::try_connect(&self.db_path).await }).await.as_ref()
+    self
+      .cell
+      .get_or_init(|| async {
+        let key = db_key::resolve(self.db_path.parent()?)?;
+
+        LocalStore::try_connect(&self.db_path, &key).await
+      })
+      .await
+      .as_ref()
   }
 
   pub async fn load_snapshot(&self, user_id: &str) -> LocalSnapshot {

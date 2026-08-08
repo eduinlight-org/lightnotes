@@ -5,6 +5,9 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{ConnectOptions, Row, SqlitePool};
 use sync_dto::{ChangeOp, ChangePayload, EntityKind, FolderDto, FolderIconDto, NoteDto, QueuedChange, TagDto};
 
+use crate::db_key::{raw_key_literal, DbKey};
+use crate::plaintext_migration;
+
 pub struct LocalStore {
   pool: SqlitePool,
 }
@@ -23,7 +26,7 @@ pub struct LocalSnapshot {
 }
 
 impl LocalStore {
-  pub async fn try_connect(db_path: &Path) -> Option<Self> {
+  pub async fn try_connect(db_path: &Path, key: &DbKey) -> Option<Self> {
     if let Some(parent) = db_path.parent() {
       if let Err(err) = std::fs::create_dir_all(parent) {
         error!("local store unavailable: cannot create directory {}: {err}", parent.display());
@@ -31,7 +34,15 @@ impl LocalStore {
       }
     }
 
-    let options = SqliteConnectOptions::new().filename(db_path).create_if_missing(true).disable_statement_logging();
+    if !plaintext_migration::migrate_if_plaintext(db_path, key).await {
+      return None;
+    }
+
+    let options = SqliteConnectOptions::new()
+      .filename(db_path)
+      .create_if_missing(true)
+      .disable_statement_logging()
+      .pragma("key", raw_key_literal(key));
     let pool = match SqlitePoolOptions::new().connect_with(options).await {
       Ok(pool) => pool,
       Err(err) => {
@@ -366,7 +377,14 @@ impl LocalStore {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::path::PathBuf;
   use sync_dto::NoteDto;
+
+  const TEST_KEY: DbKey = [0x42; 32];
+
+  fn temp_db_path() -> PathBuf {
+    std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4())).join("lightnotes.db")
+  }
 
   fn note_change(id: &str, title: &str, updated_at_ms: i64) -> QueuedChange {
     QueuedChange {
@@ -398,12 +416,12 @@ mod tests {
     let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
     let db_path = dir.join("nested").join("lightnotes.db");
 
-    let store = LocalStore::try_connect(&db_path).await.expect("first connect");
+    let store = LocalStore::try_connect(&db_path, &TEST_KEY).await.expect("first connect");
     store.apply("user-1", &note_change("note-1", "offline note", 1_000)).await;
     assert_eq!(store.load_snapshot("user-1").await.notes.len(), 1);
     drop(store);
 
-    let reopened = LocalStore::try_connect(&db_path).await.expect("second connect");
+    let reopened = LocalStore::try_connect(&db_path, &TEST_KEY).await.expect("second connect");
     let snapshot = reopened.load_snapshot("user-1").await;
 
     assert_eq!(snapshot.notes.len(), 1);
@@ -417,11 +435,11 @@ mod tests {
     let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
     let db_path = dir.join("lightnotes.db");
 
-    let store = LocalStore::try_connect(&db_path).await.expect("first connect");
+    let store = LocalStore::try_connect(&db_path, &TEST_KEY).await.expect("first connect");
     store.enqueue_outbound("user-1", &note_change("note-1", "offline note", 1_000)).await;
     drop(store);
 
-    let reopened = LocalStore::try_connect(&db_path).await.expect("second connect");
+    let reopened = LocalStore::try_connect(&db_path, &TEST_KEY).await.expect("second connect");
     let (row_id, change) = reopened.peek_front_outbound("user-1").await.expect("queued change survived");
 
     assert_eq!(change.entity_id, "note-1");
@@ -437,7 +455,7 @@ mod tests {
     let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
     let db_path = dir.join("lightnotes.db");
 
-    let store = LocalStore::try_connect(&db_path).await.expect("connect");
+    let store = LocalStore::try_connect(&db_path, &TEST_KEY).await.expect("connect");
     store.apply("user-1", &note_change("note-1", "mine", 1_000)).await;
     store.enqueue_outbound("user-1", &note_change("note-2", "queued", 2_000)).await;
     store.set_cursor("user-1", 42).await;
@@ -463,7 +481,7 @@ mod tests {
     let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
     let db_path = dir.join("lightnotes.db");
 
-    let store = LocalStore::try_connect(&db_path).await.expect("connect");
+    let store = LocalStore::try_connect(&db_path, &TEST_KEY).await.expect("connect");
     store.apply("user-a", &note_change("note-1", "belongs to a", 1_000)).await;
     store.apply("user-b", &note_change("note-1", "belongs to b", 1_000)).await;
 
@@ -488,7 +506,7 @@ mod tests {
     let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
     let db_path = dir.join("lightnotes.db");
 
-    let store = LocalStore::try_connect(&db_path).await.expect("connect");
+    let store = LocalStore::try_connect(&db_path, &TEST_KEY).await.expect("connect");
     store.enqueue_outbound("user-a", &note_change("note-1", "a is offline", 1_000)).await;
 
     assert!(store.peek_front_outbound("user-b").await.is_none());
@@ -504,7 +522,7 @@ mod tests {
     let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
     let db_path = dir.join("lightnotes.db");
 
-    let store = LocalStore::try_connect(&db_path).await.expect("connect");
+    let store = LocalStore::try_connect(&db_path, &TEST_KEY).await.expect("connect");
     store.set_cursor("user-a", 42).await;
     store.set_cursor("user-b", 7).await;
 
@@ -519,6 +537,82 @@ mod tests {
   async fn unwritable_path_returns_none_instead_of_panicking() {
     let db_path = Path::new("/dev/null/lightnotes/lightnotes.db");
 
-    assert!(LocalStore::try_connect(db_path).await.is_none());
+    assert!(LocalStore::try_connect(db_path, &TEST_KEY).await.is_none());
+  }
+
+  #[tokio::test]
+  async fn sqlcipher_is_actually_linked() {
+    let db_path = temp_db_path();
+    let store = LocalStore::try_connect(&db_path, &TEST_KEY).await.expect("connect");
+
+    let version: Option<String> = sqlx::query_scalar("PRAGMA cipher_version")
+      .fetch_optional(&store.pool)
+      .await
+      .expect("failed to query cipher_version");
+
+    assert!(
+      version.is_some_and(|version| !version.is_empty()),
+      "sqlite is not linked against sqlcipher, so the local store is NOT encrypted"
+    );
+
+    std::fs::remove_dir_all(db_path.parent().expect("parent")).ok();
+  }
+
+  #[tokio::test]
+  async fn the_database_file_is_not_readable_as_plaintext_sqlite() {
+    let db_path = temp_db_path();
+    let store = LocalStore::try_connect(&db_path, &TEST_KEY).await.expect("connect");
+    store.apply("user-1", &note_change("note-1", "secret note", 1_000)).await;
+    drop(store);
+
+    let bytes = std::fs::read(&db_path).expect("read database");
+
+    assert!(!bytes.starts_with(b"SQLite format 3\0"), "the database still has a plaintext sqlite header");
+    assert!(
+      !bytes.windows(11).any(|window| window == b"secret note"),
+      "the note title is readable in the raw database file"
+    );
+
+    let wrong_key: DbKey = [0x17; 32];
+    assert!(LocalStore::try_connect(&db_path, &wrong_key).await.is_none(), "the database opened with the wrong key");
+
+    std::fs::remove_dir_all(db_path.parent().expect("parent")).ok();
+  }
+
+  #[tokio::test]
+  async fn a_plaintext_database_is_migrated_without_losing_notes() {
+    let db_path = temp_db_path();
+    std::fs::create_dir_all(db_path.parent().expect("parent")).expect("create dir");
+
+    let plaintext = SqlitePoolOptions::new()
+      .connect_with(SqliteConnectOptions::new().filename(&db_path).create_if_missing(true).disable_statement_logging())
+      .await
+      .expect("plaintext connect");
+    sqlx::migrate!("./migrations").run(&plaintext).await.expect("plaintext migrations");
+    sqlx::query(
+      "INSERT INTO notes (user_id, id, title, content, folder_id, tag_ids, pinned, starred, updated_at_ms, sort_order, date_ms, remind_before_hours) \
+       VALUES ('user-1', 'note-1', 'never synced', 'body', NULL, '[]', 0, 0, 1000, 1, 1000, NULL)",
+    )
+    .execute(&plaintext)
+    .await
+    .expect("insert plaintext note");
+    sqlx::raw_sql("PRAGMA user_version = 7").execute(&plaintext).await.expect("set user_version");
+    plaintext.close().await;
+
+    assert!(plaintext_migration::is_plaintext(&db_path), "the fixture is not a plaintext database");
+
+    let store = LocalStore::try_connect(&db_path, &TEST_KEY).await.expect("connect after migration");
+    let snapshot = store.load_snapshot("user-1").await;
+
+    assert_eq!(snapshot.notes.len(), 1);
+    assert_eq!(snapshot.notes[0].title, "never synced");
+
+    let user_version: i64 = sqlx::query_scalar("PRAGMA user_version").fetch_one(&store.pool).await.expect("user_version");
+    assert_eq!(user_version, 7);
+
+    assert!(!plaintext_migration::is_plaintext(&db_path), "the database is still plaintext after migrating");
+
+    std::fs::remove_dir_all(db_path.parent().expect("parent")).ok();
   }
 }
+
