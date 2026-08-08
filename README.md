@@ -47,6 +47,7 @@ LightNotes is intended to be self-hosted: you run the `api` backend yourself alo
 
 **Offline-first sync**
 - Every note, folder, and tag is persisted on-device (SQLite on native, a local store on web) so the app works fully offline.
+- On native platforms that database is encrypted at rest with SQLCipher, under a random 256-bit key held in the OS keychain (Keychain on macOS/iOS, Credential Manager on Windows, Secret Service on Linux, app-private storage on Android). Notes, the pending-sync queue, and the stored auth tokens are all covered. Sync itself is *not* end-to-end encrypted — the server can read note content.
 - A background sync engine reconciles local changes against a self-hosted Rust API over REST + Server-Sent Events, with debounced batching, exponential-backoff reconnects, and last-write-wins conflict resolution.
 - A manual "Go offline / Go online" toggle in Settings lets you simulate connectivity loss.
 
@@ -80,7 +81,7 @@ notes/
    ├─ app/        # Shared routes, views, and app-specific components (used by web/desktop/mobile)
    ├─ ui/         # Generic, app-agnostic presentational components
    ├─ editor/     # The rich-text/Markdown editor engine used by the note editor
-   ├─ store-sdk/  # Local, on-device persistence (SQLite / web storage)
+   ├─ store-sdk/  # Local, on-device persistence (SQLCipher-encrypted SQLite / web storage)
    ├─ sync-dto/   # Shared data-transfer types for the client/server sync contract
    └─ api-sdk/    # Typed client for calling the api crate's endpoints
 ```
