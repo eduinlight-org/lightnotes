@@ -17,6 +17,12 @@ pub use use_notes::use_notes;
 
 mod preferences;
 
+pub mod reminders;
+pub use reminders::use_reminders;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod scheduler;
+
 mod sync;
 pub use sync::{api_base_url, use_synced_notes};
 

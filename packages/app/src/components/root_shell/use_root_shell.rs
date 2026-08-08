@@ -1,5 +1,5 @@
 use crate::boot::DISMISS_SPLASH_JS;
-use crate::state::{date_math, use_app_i18n, use_persisted_session, use_synced_notes, AuthState, AuthStatus, BootState};
+use crate::state::{date_math, use_app_i18n, use_persisted_session, use_reminders, use_synced_notes, AuthState, AuthStatus, BootState};
 use crate::Route;
 use dioxus::prelude::*;
 use ui::components::sidebar::use_viewport_resolved;
@@ -20,6 +20,7 @@ pub fn use_root_shell() -> RootShellState {
   let store = use_synced_notes();
   use_persisted_session(auth);
   use_app_i18n(store);
+  use_reminders(store);
 
   let resolved = use_viewport_resolved();
   let mut viewport_ready = boot.viewport_ready;

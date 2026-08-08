@@ -193,6 +193,17 @@ impl NotesStore {
     (self.user_id)()
   }
 
+  #[cfg(not(target_arch = "wasm32"))]
+  pub fn peek_user_id(&self) -> String {
+    self.user_id.peek().clone()
+  }
+
+  #[cfg(not(target_arch = "wasm32"))]
+  pub fn peek_notes(&self) -> Vec<Note> {
+    let user_id = self.peek_user_id();
+    self.notes.peek().iter().filter(|note| note.user_id == user_id).cloned().collect()
+  }
+
   pub fn set_user(&mut self, user_id: String) {
     self.user_id.set(user_id);
   }

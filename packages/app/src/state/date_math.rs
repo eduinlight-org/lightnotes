@@ -1,13 +1,20 @@
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 
 pub const MS_PER_DAY: i64 = 86_400_000;
 pub const MS_PER_HOUR: i64 = 3_600_000;
 pub const MS_PER_MINUTE: i64 = 60_000;
 
 static LOCAL_OFFSET_MS: AtomicI64 = AtomicI64::new(0);
+static LOCAL_OFFSET_READY: AtomicBool = AtomicBool::new(false);
 
 pub fn set_local_offset_ms(offset_ms: i64) {
   LOCAL_OFFSET_MS.store(offset_ms, Ordering::Relaxed);
+  LOCAL_OFFSET_READY.store(true, Ordering::Relaxed);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn local_offset_ready() -> bool {
+  LOCAL_OFFSET_READY.load(Ordering::Relaxed)
 }
 
 pub fn local_offset_ms() -> i64 {
