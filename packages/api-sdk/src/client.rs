@@ -46,6 +46,7 @@ pub struct ApiClient {
   http: reqwest::Client,
   tokens: Mutex<Option<AuthTokensDto>>,
   rotated: Mutex<Option<AuthTokensDto>>,
+  expired: Mutex<bool>,
   refresh_lock: futures_util::lock::Mutex<()>,
 }
 
@@ -81,12 +82,14 @@ impl ApiClient {
       http: reqwest::Client::new(),
       tokens: Mutex::new(None),
       rotated: Mutex::new(None),
+      expired: Mutex::new(false),
       refresh_lock: futures_util::lock::Mutex::new(()),
     }
   }
 
   pub fn set_tokens(&self, tokens: Option<AuthTokensDto>) {
     *self.tokens.lock().expect("token slot poisoned") = tokens;
+    *self.expired.lock().expect("expiry slot poisoned") = false;
   }
 
   pub fn access_token(&self) -> Option<String> {
@@ -111,6 +114,14 @@ impl ApiClient {
     self.rotated.lock().expect("rotation slot poisoned").take()
   }
 
+  pub fn take_session_expired(&self) -> bool {
+    std::mem::take(&mut *self.expired.lock().expect("expiry slot poisoned"))
+  }
+
+  fn mark_session_expired(&self) {
+    *self.expired.lock().expect("expiry slot poisoned") = true;
+  }
+
   fn store_rotated(&self, tokens: AuthTokensDto) {
     *self.tokens.lock().expect("token slot poisoned") = Some(tokens.clone());
     *self.rotated.lock().expect("rotation slot poisoned") = Some(tokens);
@@ -124,7 +135,10 @@ impl ApiClient {
       return current.ok_or(ApiSdkError::Unauthorized);
     }
 
-    let refresh_token = self.refresh_token().ok_or(ApiSdkError::Unauthorized)?;
+    let Some(refresh_token) = self.refresh_token() else {
+      self.mark_session_expired();
+      return Err(ApiSdkError::Unauthorized);
+    };
 
     let response = self
       .http
@@ -135,6 +149,7 @@ impl ApiClient {
 
     if response.status() == reqwest::StatusCode::UNAUTHORIZED {
       self.set_tokens(None);
+      self.mark_session_expired();
       return Err(ApiSdkError::Unauthorized);
     }
 
@@ -168,6 +183,8 @@ impl ApiClient {
     let retried = build(&self.http, Some(&refreshed)).send().await?;
 
     if retried.status() == reqwest::StatusCode::UNAUTHORIZED {
+      self.set_tokens(None);
+      self.mark_session_expired();
       return Err(ApiSdkError::Unauthorized);
     }
 
