@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use futures_util::StreamExt;
 
 use super::dto::{api_base_url, diff_folders, diff_notes, diff_tags, merge_server_changes};
-use crate::state::auth::{use_auth, AuthState};
+use crate::state::auth::{use_auth, AuthState, AuthStatus};
 use crate::state::boot::use_boot;
 use crate::state::notes::{Folder, Note, NotesStore, SyncStatus, Tag};
 use crate::state::preferences::use_persisted_preferences;
@@ -40,6 +40,10 @@ fn use_device_id() -> Signal<String> {
 fn persist_tokens(api: &ApiClient, mut auth: AuthState) {
   if let Some(rotated) = api.take_rotated_tokens() {
     auth.set_tokens(rotated);
+  }
+
+  if api.take_session_expired() && *auth.status.peek() == AuthStatus::SignedIn {
+    auth.sign_out();
   }
 }
 

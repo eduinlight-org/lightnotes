@@ -7,7 +7,7 @@ use store_sdk::{use_synced_store, StoreConfig, StoreHandle};
 use sync_dto::QueuedChange;
 
 use super::dto::{api_base_url, compute_next_id, diff_folders, diff_notes, diff_tags, folder_from_dto, merge_server_changes, note_from_dto, tag_from_dto};
-use crate::state::auth::{use_auth, AuthState};
+use crate::state::auth::{use_auth, AuthState, AuthStatus};
 use crate::state::boot::use_boot;
 use crate::state::notes::{Folder, Note, NotesStore, SyncStatus, Tag};
 use crate::state::preferences::use_persisted_preferences;
@@ -24,8 +24,14 @@ async fn apply_outbound(handle: StoreHandle, user_id: String, changes: Vec<Queue
 }
 
 fn persist_tokens(handle: &StoreHandle, mut auth: AuthState) {
-  if let Some(rotated) = handle.api().take_rotated_tokens() {
+  let api = handle.api();
+
+  if let Some(rotated) = api.take_rotated_tokens() {
     auth.set_tokens(rotated);
+  }
+
+  if api.take_session_expired() && *auth.status.peek() == AuthStatus::SignedIn {
+    auth.sign_out();
   }
 }
 
