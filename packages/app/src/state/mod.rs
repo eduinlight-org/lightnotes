@@ -20,7 +20,6 @@ mod preferences;
 pub mod reminders;
 pub use reminders::use_reminders;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub mod scheduler;
 
 mod sync;

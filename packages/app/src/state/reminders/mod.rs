@@ -1,7 +1,5 @@
 #[cfg(not(target_arch = "wasm32"))]
 mod plan;
-#[cfg(not(target_arch = "wasm32"))]
-pub use plan::ScheduleAction;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod native;

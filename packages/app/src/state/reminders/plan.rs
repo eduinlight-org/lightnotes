@@ -1,28 +1,15 @@
 use crate::state::date_math::MS_PER_HOUR;
+use crate::state::scheduler::{ScheduleAction, ScheduledReminder};
 use crate::state::Note;
 
 pub const MAX_SCHEDULED: usize = 60;
 pub const CATCH_UP_WINDOW_MS: i64 = 60 * 60 * 1000;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ScheduledReminder {
-  pub note_id: String,
-  pub fire_at_local_ms: i64,
-  pub title: String,
-  pub payload_hash: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct ScheduledRecord {
   pub note_id: String,
   pub fire_at_local_ms: i64,
   pub payload_hash: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum ScheduleAction {
-  Set(ScheduledReminder),
-  Remove { note_id: String },
 }
 
 pub fn fire_at_local_ms(date_ms: i64, remind_before_hours: i64) -> i64 {

@@ -5,30 +5,29 @@ use dioxus::prelude::*;
 use dioxus_i18n::t;
 use store_sdk::{ReminderSchedule, StoreHandle};
 
-use super::plan::{
-  desired_reminders, diff, due_reminders, ScheduleAction, ScheduledRecord, ScheduledReminder, CATCH_UP_WINDOW_MS, MAX_SCHEDULED,
-};
+use super::plan::{desired_reminders, diff, due_reminders, ScheduledRecord, CATCH_UP_WINDOW_MS, MAX_SCHEDULED};
 use crate::state::i18n::format_absolute;
 use crate::state::notes::now_ms;
-use crate::state::scheduler::{self, Notification, SchedulerSupport};
-use crate::state::{date_math, local_now_ms, use_boot, Note, NotesStore};
+use crate::state::scheduler::{self, Notification, ScheduleAction, ScheduledReminder, SchedulerSupport};
+use crate::state::{date_math, local_now_ms, use_boot, NotesStore};
 
 const RECONCILE_DEBOUNCE_MS: u64 = 1_000;
 const TICK_MS: u64 = 30_000;
 
-fn notification_title(note: &Note) -> String {
-  match note.title.trim() {
+fn notification_title(raw_title: &str, titles_visible: bool) -> String {
+  if !titles_visible {
+    return t!("reminder-notification-generic");
+  }
+
+  match raw_title.trim() {
     "" => t!("reminder-notification-untitled"),
     title => title.to_string(),
   }
 }
 
-fn notification_for(reminder: &ScheduledReminder) -> Notification {
+fn notification_for(reminder: &ScheduledReminder, titles_visible: bool) -> Notification {
   Notification {
-    title: match reminder.title.trim() {
-      "" => t!("reminder-notification-untitled"),
-      title => title.to_string(),
-    },
+    title: notification_title(&reminder.title, titles_visible),
     body: t!("reminder-notification-body", when: format_absolute(reminder.fire_at_local_ms)),
   }
 }
@@ -87,6 +86,8 @@ pub fn use_reminders(store: NotesStore) {
       return;
     }
 
+    let enabled = store.reminders_enabled();
+    let titles_visible = store.reminder_titles_visible();
     let user_id = store.peek_user_id();
     let generation_at_spawn = {
       let mut generation = generation.write();
@@ -94,9 +95,11 @@ pub fn use_reminders(store: NotesStore) {
       *generation
     };
 
-    let desired = match user_id.is_empty() {
-      true => Vec::new(),
-      false => desired_reminders(&store.peek_notes(), local_now_ms(), MAX_SCHEDULED, notification_title),
+    let desired = match enabled && !user_id.is_empty() {
+      false => Vec::new(),
+      true => desired_reminders(&store.peek_notes(), local_now_ms(), MAX_SCHEDULED, |note| {
+        notification_title(&note.title, titles_visible)
+      }),
     };
 
     let handle = reconcile_handle.clone();
@@ -128,7 +131,7 @@ pub fn use_reminders(store: NotesStore) {
           continue;
         }
 
-        if store.peek_user_id().is_empty() {
+        if !store.peek_reminders_enabled() || store.peek_user_id().is_empty() {
           continue;
         }
 
@@ -153,12 +156,14 @@ pub fn use_reminders(store: NotesStore) {
   });
 
   use_effect(move || {
+    let titles_visible = store.reminder_titles_visible();
+
     if pending.read().is_empty() {
       return;
     }
 
     for reminder in std::mem::take(&mut *pending.write()) {
-      scheduler::notify_now(notification_for(&reminder));
+      scheduler::notify_now(notification_for(&reminder, titles_visible));
     }
   });
 }

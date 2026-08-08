@@ -1,12 +1,13 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Sender};
 use std::sync::OnceLock;
 
 use dioxus::logger::tracing::warn;
 
-use super::{Notification, SchedulerSupport};
-use crate::state::reminders::ScheduleAction;
+use super::{Notification, Permission, ScheduleAction, SchedulerSupport};
 
 static SENDER: OnceLock<Option<Sender<Notification>>> = OnceLock::new();
+static DELIVERY_REFUSED: AtomicBool = AtomicBool::new(false);
 
 fn sender() -> Option<&'static Sender<Notification>> {
   SENDER
@@ -22,6 +23,7 @@ fn sender() -> Option<&'static Sender<Notification>> {
               .body(&notification.body)
               .show()
             {
+              DELIVERY_REFUSED.store(true, Ordering::Relaxed);
               warn!("reminder notification was not delivered: {err}");
             }
           }
@@ -45,7 +47,18 @@ pub fn notify_now(notification: Notification) {
 }
 
 pub async fn support() -> SchedulerSupport {
-  SchedulerSupport { background: false }
+  SchedulerSupport { background: false, permission: permission() }
+}
+
+pub async fn request_permission() -> Permission {
+  permission()
+}
+
+fn permission() -> Permission {
+  match DELIVERY_REFUSED.load(Ordering::Relaxed) {
+    true => Permission::Denied,
+    false => Permission::Granted,
+  }
 }
 
 pub async fn apply(_actions: Vec<ScheduleAction>) -> Vec<ScheduleAction> {
