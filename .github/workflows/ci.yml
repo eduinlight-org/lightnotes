@@ -29,6 +29,14 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
+      - name: Stub dx-generated stylesheets
+        shell: bash
+        run: |
+          for app in desktop landing mobile web; do
+            mkdir -p "apps/$app/assets"
+            touch "apps/$app/assets/tailwind.css"
+          done
+
       - name: Cache cargo registry and target
         uses: Swatinem/rust-cache@v2
         with:
@@ -54,6 +62,14 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Stub dx-generated stylesheets
+        shell: bash
+        run: |
+          for app in desktop landing mobile web; do
+            mkdir -p "apps/$app/assets"
+            touch "apps/$app/assets/tailwind.css"
+          done
+
       - name: Cache cargo registry and target
         uses: Swatinem/rust-cache@v2
         with:
@@ -78,6 +94,14 @@ jobs:
 
       - name: Install NASM
         uses: ilammy/setup-nasm@v1
+
+      - name: Stub dx-generated stylesheets
+        shell: bash
+        run: |
+          for app in desktop landing mobile web; do
+            mkdir -p "apps/$app/assets"
+            touch "apps/$app/assets/tailwind.css"
+          done
 
       - name: Cache cargo registry and target
         uses: Swatinem/rust-cache@v2
