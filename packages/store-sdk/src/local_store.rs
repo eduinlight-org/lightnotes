@@ -535,9 +535,17 @@ mod tests {
 
   #[tokio::test]
   async fn unwritable_path_returns_none_instead_of_panicking() {
-    let db_path = Path::new("/dev/null/lightnotes/lightnotes.db");
+    let dir = std::env::temp_dir().join(format!("lightnotes-test-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
 
-    assert!(LocalStore::try_connect(db_path, &TEST_KEY).await.is_none());
+    let blocker = dir.join("not-a-directory");
+    std::fs::write(&blocker, b"").expect("blocker file");
+
+    let db_path = blocker.join("lightnotes").join("lightnotes.db");
+
+    assert!(LocalStore::try_connect(&db_path, &TEST_KEY).await.is_none());
+
+    std::fs::remove_dir_all(&dir).ok();
   }
 
   #[tokio::test]

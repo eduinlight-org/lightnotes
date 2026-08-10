@@ -10,5 +10,8 @@ palette = { version = "0.7.6", default-features = false }
 dioxus-icons = { version = "0.1.0", default-features = false }
 time = { version = "0.3.44", default-features = false }
 
+[dev-dependencies]
+dioxus-ssr = "0.7"
+
 [features]
 server = []
