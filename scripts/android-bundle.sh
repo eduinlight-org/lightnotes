@@ -12,6 +12,7 @@ OUTPUTS="$PROJECT/app/build/outputs"
 dx bundle --package light-notes-mobile --platform android --release --package-types apk --package-types aab
 
 "$ROOT/scripts/android-icons.sh" "$ICONS" "$PROJECT/app/src/main/res"
+"$ROOT/scripts/android-overlay.sh" "$PROJECT"
 
 if grep -q '^\[bundle\.android\]' "$MANIFEST"; then
   APK_TASK="assembleRelease"

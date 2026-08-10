@@ -133,6 +133,8 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "gloo-timers",
+ "jni 0.21.1",
+ "ndk-context",
  "notify-rust",
  "objc2",
  "objc2-foundation",

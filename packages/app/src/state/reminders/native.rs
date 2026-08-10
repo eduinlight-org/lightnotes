@@ -40,6 +40,19 @@ fn record_of(schedule: ReminderSchedule) -> ScheduledRecord {
   }
 }
 
+#[cfg(target_os = "android")]
+async fn rearm_after_reboot(handle: &StoreHandle, user_id: &str, rearmed: &mut Signal<bool>) {
+  if *rearmed.peek() {
+    return;
+  }
+
+  rearmed.set(true);
+  handle.clear_reminder_schedules(user_id).await;
+}
+
+#[cfg(not(target_os = "android"))]
+async fn rearm_after_reboot(_handle: &StoreHandle, _user_id: &str, _rearmed: &mut Signal<bool>) {}
+
 async fn reconcile(handle: StoreHandle, user_id: String, desired: Vec<ScheduledReminder>) {
   let current: Vec<ScheduledRecord> = handle.load_reminder_schedules(&user_id).await.into_iter().map(record_of).collect();
   let actions = diff(&desired, &current);
@@ -70,6 +83,7 @@ pub fn use_reminders(store: NotesStore) {
   let mut support = use_signal(SchedulerSupport::default);
   let mut generation = use_signal(|| 0u64);
   let mut pending = use_signal(Vec::<(Note, i64)>::new);
+  let mut rearmed = use_signal(|| false);
 
   use_hook(move || {
     spawn(async move {
@@ -116,6 +130,7 @@ pub fn use_reminders(store: NotesStore) {
         return;
       }
 
+      rearm_after_reboot(&handle, &user_id, &mut rearmed).await;
       reconcile(handle, user_id, desired).await;
     });
   });

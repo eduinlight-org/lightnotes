@@ -29,7 +29,7 @@ pub fn utc_ms_to_local_ms(utc_ms: i64) -> i64 {
   utc_ms + local_offset_ms()
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "windows", target_os = "android"))]
 pub fn local_ms_to_utc_ms(local_ms: i64) -> i64 {
   local_ms - local_offset_ms()
 }
