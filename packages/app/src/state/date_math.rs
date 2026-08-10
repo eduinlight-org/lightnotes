@@ -29,6 +29,11 @@ pub fn utc_ms_to_local_ms(utc_ms: i64) -> i64 {
   utc_ms + local_offset_ms()
 }
 
+#[cfg(target_os = "windows")]
+pub fn local_ms_to_utc_ms(local_ms: i64) -> i64 {
+  local_ms - local_offset_ms()
+}
+
 pub fn days_from_civil(y: i32, m: u32, d: u32) -> i64 {
   let y = y as i64 - if m <= 2 { 1 } else { 0 };
   let era = if y >= 0 { y } else { y - 399 } / 400;
