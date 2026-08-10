@@ -18,7 +18,12 @@ use crate::state::date_math::date_ms_to_ymdhm;
 fn center() -> Option<Retained<UNUserNotificationCenter>> {
   NSBundle::mainBundle().bundleIdentifier()?;
 
-  Some(UNUserNotificationCenter::currentNotificationCenter())
+  let center = UNUserNotificationCenter::currentNotificationCenter();
+
+  #[cfg(target_os = "ios")]
+  foreground::install(&center);
+
+  Some(center)
 }
 
 async fn authorization_status() -> Option<UNAuthorizationStatus> {
@@ -46,10 +51,20 @@ fn permission_of(status: UNAuthorizationStatus) -> Permission {
   }
 }
 
+#[cfg(target_os = "macos")]
+fn unbundled_permission() -> Permission {
+  super::notify::delivery_permission()
+}
+
+#[cfg(target_os = "ios")]
+fn unbundled_permission() -> Permission {
+  Permission::Unsupported
+}
+
 pub async fn support() -> SchedulerSupport {
   let Some(status) = authorization_status().await else {
     warn!("background reminders unavailable: not running from an application bundle");
-    return SchedulerSupport { background: false, permission: super::notify::delivery_permission() };
+    return SchedulerSupport { background: false, permission: unbundled_permission() };
   };
 
   let permission = permission_of(status);
@@ -133,6 +148,22 @@ pub async fn apply(actions: Vec<ScheduleAction>) -> Vec<ScheduleAction> {
   actions
 }
 
+#[cfg(target_os = "ios")]
+pub fn notify_now(notification: super::Notification) {
+  let Some(center) = center() else {
+    return;
+  };
+
+  let content = UNMutableNotificationContent::new();
+  content.setTitle(&NSString::from_str(&notification.title));
+  content.setBody(&NSString::from_str(&notification.body));
+
+  let identifier = NSString::from_str(&format!("immediate-{}", notification.title));
+  let request = UNNotificationRequest::requestWithIdentifier_content_trigger(&identifier, &content, None);
+
+  center.addNotificationRequest_withCompletionHandler(&request, None);
+}
+
 pub async fn clear_all() {
   let Some(center) = center() else {
     return;
@@ -148,5 +179,57 @@ mod tests {
   #[test]
   fn an_unbundled_process_never_reaches_the_notification_center() {
     assert!(center().is_none());
+  }
+}
+
+#[cfg(target_os = "ios")]
+mod foreground {
+  use std::sync::atomic::{AtomicBool, Ordering};
+
+  use block2::DynBlock;
+  use objc2::rc::Retained;
+  use objc2::runtime::{NSObject, ProtocolObject};
+  use objc2::{define_class, msg_send, MainThreadMarker, MainThreadOnly};
+  use objc2_foundation::NSObjectProtocol;
+  use objc2_user_notifications::{
+    UNNotification, UNNotificationPresentationOptions, UNUserNotificationCenter, UNUserNotificationCenterDelegate,
+  };
+
+  define_class!(
+    #[unsafe(super(NSObject))]
+    #[name = "LightNotesNotificationDelegate"]
+    #[thread_kind = MainThreadOnly]
+    struct Delegate;
+
+    unsafe impl NSObjectProtocol for Delegate {}
+
+    unsafe impl UNUserNotificationCenterDelegate for Delegate {
+      #[unsafe(method(userNotificationCenter:willPresentNotification:withCompletionHandler:))]
+      fn will_present(
+        &self,
+        _center: &UNUserNotificationCenter,
+        _notification: &UNNotification,
+        completion: &DynBlock<dyn Fn(UNNotificationPresentationOptions)>,
+      ) {
+        completion.call((UNNotificationPresentationOptions::Banner | UNNotificationPresentationOptions::Sound,));
+      }
+    }
+  );
+
+  static INSTALLED: AtomicBool = AtomicBool::new(false);
+
+  pub fn install(center: &UNUserNotificationCenter) {
+    let Some(mtm) = MainThreadMarker::new() else {
+      return;
+    };
+
+    if INSTALLED.swap(true, Ordering::Relaxed) {
+      return;
+    }
+
+    let delegate: Retained<Delegate> = unsafe { msg_send![Delegate::alloc(mtm), init] };
+    center.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
+
+    std::mem::forget(delegate);
   }
 }
