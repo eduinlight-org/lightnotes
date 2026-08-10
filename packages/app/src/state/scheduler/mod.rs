@@ -53,9 +53,9 @@ mod linux;
 pub use linux::{apply, clear_all, request_permission, support};
 
 #[cfg(target_os = "windows")]
-mod fallback;
+mod windows;
 #[cfg(target_os = "windows")]
-pub use fallback::{apply, clear_all, request_permission, support};
+pub use windows::{apply, clear_all, request_permission, support};
 
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
 mod unsupported;

@@ -26,6 +26,10 @@ webbrowser = "1"
 [target.'cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))'.dependencies]
 notify-rust = "4"
 
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.61", features = ["Data_Xml_Dom", "Foundation", "Foundation_Collections", "UI_Notifications"] }
+windows-registry = "0.5"
+
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = "0.6"
 futures-channel = "0.3"
