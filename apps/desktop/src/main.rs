@@ -13,7 +13,24 @@ fn stylesheets() -> Vec<String> {
   ]
 }
 
+const NOTIFY_REMINDER_FLAG: &str = "--notify-reminder";
+
+fn reminder_payload() -> Option<(String, String)> {
+  let arguments: Vec<String> = std::env::args().collect();
+  let flag = arguments.iter().position(|argument| argument == NOTIFY_REMINDER_FLAG)?;
+
+  Some((
+    arguments.get(flag + 1).cloned().unwrap_or_default(),
+    arguments.get(flag + 2).cloned().unwrap_or_default(),
+  ))
+}
+
 fn main() {
+  if let Some((title, body)) = reminder_payload() {
+    app::deliver_reminder(title, body);
+    return;
+  }
+
   dioxus::LaunchBuilder::new()
     .with_cfg(desktop!(dioxus::desktop::Config::new()
       .with_custom_index(app::boot::custom_index(&stylesheets()))

@@ -46,6 +46,17 @@ pub fn notify_now(notification: Notification) {
   }
 }
 
+pub fn deliver_blocking(notification: Notification) {
+  if let Err(err) = notify_rust::Notification::new()
+    .appname("LightNotes")
+    .summary(&notification.title)
+    .body(&notification.body)
+    .show()
+  {
+    warn!("reminder notification was not delivered: {err}");
+  }
+}
+
 pub fn delivery_permission() -> Permission {
   match DELIVERY_REFUSED.load(Ordering::Relaxed) {
     true => Permission::Denied,

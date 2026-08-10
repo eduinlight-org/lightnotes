@@ -40,16 +40,21 @@ pub struct SchedulerSupport {
 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
 mod notify;
 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
-pub use notify::notify_now;
+pub use notify::{deliver_blocking, notify_now};
 
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(target_os = "macos")]
 pub use macos::{apply, clear_all, request_permission, support};
 
-#[cfg(any(target_os = "windows", target_os = "linux"))]
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "linux")]
+pub use linux::{apply, clear_all, request_permission, support};
+
+#[cfg(target_os = "windows")]
 mod fallback;
-#[cfg(any(target_os = "windows", target_os = "linux"))]
+#[cfg(target_os = "windows")]
 pub use fallback::{apply, clear_all, request_permission, support};
 
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
