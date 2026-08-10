@@ -9,6 +9,11 @@ use components::{AppShell, DiaryShell, NotesShell, RootShell, SectionShell};
 
 mod state;
 
+#[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+pub fn deliver_reminder(title: String, body: String) {
+  state::scheduler::deliver_blocking(state::scheduler::Notification { title, body });
+}
+
 mod views;
 pub use views::{Diary, DiaryEntry, FoldersScreen, Login, NoteEditor, Notes, Settings, TagsScreen};
 
