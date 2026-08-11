@@ -168,18 +168,99 @@ fn permission_state(env: &mut JNIEnv, activity: &JObject) -> jni::errors::Result
   })
 }
 
+const CHANNEL_ID: &str = "lightnotes-reminders";
+const IMPORTANCE_DEFAULT: i32 = 3;
+const OREO: i32 = 26;
+const FALLBACK_ICON: i32 = 0x0108_00a4;
+
+fn small_icon(env: &mut JNIEnv, activity: &JObject) -> jni::errors::Result<i32> {
+  let info = env
+    .call_method(activity, "getApplicationInfo", "()Landroid/content/pm/ApplicationInfo;", &[])?
+    .l()?;
+  let icon = env.get_field(&info, "icon", "I")?.i()?;
+
+  Ok(match icon {
+    0 => FALLBACK_ICON,
+    icon => icon,
+  })
+}
+
+fn ensure_channel(env: &mut JNIEnv, manager: &JObject) -> jni::errors::Result<()> {
+  if sdk_int(env)? < OREO {
+    return Ok(());
+  }
+
+  let id = env.new_string(CHANNEL_ID)?;
+  let name = env.new_string("Reminders")?;
+  let channel = env.new_object(
+    "android/app/NotificationChannel",
+    "(Ljava/lang/String;Ljava/lang/CharSequence;I)V",
+    &[JValue::Object(&id), JValue::Object(&name), JValue::Int(IMPORTANCE_DEFAULT)],
+  )?;
+
+  env.call_method(
+    manager,
+    "createNotificationChannel",
+    "(Landroid/app/NotificationChannel;)V",
+    &[JValue::Object(&channel)],
+  )?;
+
+  Ok(())
+}
+
+fn post_notification(env: &mut JNIEnv, activity: &JObject, notification: &Notification) -> jni::errors::Result<()> {
+  let manager = service(env, activity, "notification")?;
+  ensure_channel(env, &manager)?;
+
+  let builder = match sdk_int(env)? >= OREO {
+    true => {
+      let id = env.new_string(CHANNEL_ID)?;
+      env.new_object(
+        "android/app/Notification$Builder",
+        "(Landroid/content/Context;Ljava/lang/String;)V",
+        &[JValue::Object(activity), JValue::Object(&id)],
+      )?
+    }
+    false => env.new_object(
+      "android/app/Notification$Builder",
+      "(Landroid/content/Context;)V",
+      &[JValue::Object(activity)],
+    )?,
+  };
+
+  let title = env.new_string(&notification.title)?;
+  let body = env.new_string(&notification.body)?;
+  let icon = small_icon(env, activity)?;
+
+  env.call_method(
+    &builder,
+    "setContentTitle",
+    "(Ljava/lang/CharSequence;)Landroid/app/Notification$Builder;",
+    &[JValue::Object(&title)],
+  )?;
+  env.call_method(
+    &builder,
+    "setContentText",
+    "(Ljava/lang/CharSequence;)Landroid/app/Notification$Builder;",
+    &[JValue::Object(&body)],
+  )?;
+  env.call_method(&builder, "setSmallIcon", "(I)Landroid/app/Notification$Builder;", &[JValue::Int(icon)])?;
+  env.call_method(&builder, "setAutoCancel", "(Z)Landroid/app/Notification$Builder;", &[JValue::Bool(1)])?;
+
+  let built = env.call_method(&builder, "build", "()Landroid/app/Notification;", &[])?.l()?;
+
+  env.call_method(
+    &manager,
+    "notify",
+    "(ILandroid/app/Notification;)V",
+    &[JValue::Int(request_code(&notification.title)), JValue::Object(&built)],
+  )?;
+
+  Ok(())
+}
+
 pub fn notify_now(notification: Notification) {
-  with_env(|env, activity| {
-    let intent = receiver_intent(env, activity)?;
-
-    put_string_extra(env, &intent, EXTRA_ID, "immediate")?;
-    put_string_extra(env, &intent, EXTRA_TITLE, &notification.title)?;
-    put_string_extra(env, &intent, EXTRA_BODY, &notification.body)?;
-
-    env.call_method(activity, "sendBroadcast", "(Landroid/content/Intent;)V", &[JValue::Object(&intent)])?;
-
-    Ok(())
-  });
+  with_env(|env, activity| post_notification(env, activity, &notification));
 }
 
 pub async fn support() -> SchedulerSupport {

@@ -148,6 +148,15 @@ mod tests {
   }
 
   #[test]
+  fn a_reminder_due_right_now_is_not_handed_to_the_os() {
+    let now = ymdhm_to_date_ms(2026, 8, 8, 9, 0);
+    let notes = [note("note-1", now, Some(0))];
+
+    assert!(desired_reminders(&notes, now, MAX_SCHEDULED, titles).is_empty());
+    assert_eq!(due_notes(&notes, now, 0, CATCH_UP_WINDOW_MS).len(), 1);
+  }
+
+  #[test]
   fn reminders_already_in_the_past_are_never_scheduled() {
     let now = ymdhm_to_date_ms(2026, 8, 8, 9, 0);
     let notes = [note("note-1", now - MS_PER_HOUR, Some(0))];
