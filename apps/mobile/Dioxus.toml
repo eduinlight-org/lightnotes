@@ -14,5 +14,18 @@ icon = [
 [android.application]
 theme = "@style/Theme.AppCompat.NoActionBar"
 
+[permissions.notifications]
+description = "LightNotes shows your note reminders when they are due."
+
+[android.permissions."android.permission.SCHEDULE_EXACT_ALARM"]
+description = "Fire note reminders at the exact minute you chose."
+
+[android.permissions."android.permission.USE_EXACT_ALARM"]
+description = "Fire note reminders at the exact minute you chose."
+
+[android.permissions."android.permission.RECEIVE_BOOT_COMPLETED"]
+description = "Restore your note reminders after the device restarts."
+
+
 [ios]
 icon = ["icons/ios/AppIcon.appiconset/icon-1024.png"]

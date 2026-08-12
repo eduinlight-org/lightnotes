@@ -26,6 +26,9 @@ default-members = [
     "apps/landing",
 ]
 
+[profile.dev.package."*"]
+debug = false
+
 [profile.wasm-release]
 inherits = "release"
 debug = false

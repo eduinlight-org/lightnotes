@@ -114,3 +114,43 @@ jobs:
 
       - name: Test
         run: cargo test --locked --package app --package store-sdk --package sync-dto --package ui
+
+  mobile:
+    name: Mobile
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, aarch64-apple-ios
+
+      - name: Stub dx-generated stylesheets
+        shell: bash
+        run: |
+          for app in desktop landing mobile web; do
+            mkdir -p "apps/$app/assets"
+            touch "apps/$app/assets/tailwind.css"
+          done
+
+      - name: Cache cargo registry and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: ci-mobile
+
+      - name: Check iOS
+        run: cargo check --locked --package app --target aarch64-apple-ios
+
+      - name: Check Android
+        env:
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_LATEST_HOME }}
+        run: |
+          BIN="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/darwin-x86_64/bin"
+          export PATH="$BIN:$PATH"
+          export CC_aarch64_linux_android="$BIN/aarch64-linux-android26-clang"
+          export AR_aarch64_linux_android="$BIN/llvm-ar"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$BIN/aarch64-linux-android26-clang"
+          cargo check --locked --package app --target aarch64-linux-android

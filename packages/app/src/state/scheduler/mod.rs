@@ -42,10 +42,12 @@ mod notify;
 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
 pub use notify::{deliver_blocking, notify_now};
 
-#[cfg(target_os = "macos")]
-mod macos;
-#[cfg(target_os = "macos")]
-pub use macos::{apply, clear_all, request_permission, support};
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+mod apple;
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+pub use apple::{apply, clear_all, request_permission, support};
+#[cfg(target_os = "ios")]
+pub use apple::notify_now;
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -57,9 +59,14 @@ mod windows;
 #[cfg(target_os = "windows")]
 pub use windows::{apply, clear_all, request_permission, support};
 
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+#[cfg(target_os = "android")]
+mod android;
+#[cfg(target_os = "android")]
+pub use android::{apply, clear_all, notify_now, request_permission, support};
+
+#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "windows", target_os = "linux", target_os = "android")))]
 mod unsupported;
-#[cfg(all(not(any(target_os = "macos", target_os = "windows", target_os = "linux")), not(target_arch = "wasm32")))]
+#[cfg(all(not(any(target_os = "macos", target_os = "ios", target_os = "windows", target_os = "linux", target_os = "android")), not(target_arch = "wasm32")))]
 pub use unsupported::{apply, clear_all, notify_now};
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+#[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "windows", target_os = "linux", target_os = "android")))]
 pub use unsupported::{request_permission, support};

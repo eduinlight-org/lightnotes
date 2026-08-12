@@ -32,6 +32,16 @@ fn notification_payload(note: &Note, fire_at_local_ms: i64, titles_visible: bool
   )
 }
 
+#[cfg(target_os = "android")]
+fn requires_permission_prompt(support: SchedulerSupport) -> bool {
+  support.permission != crate::state::scheduler::Permission::Granted
+}
+
+#[cfg(not(target_os = "android"))]
+fn requires_permission_prompt(_support: SchedulerSupport) -> bool {
+  false
+}
+
 fn record_of(schedule: ReminderSchedule) -> ScheduledRecord {
   ScheduledRecord {
     note_id: schedule.note_id,
@@ -39,6 +49,19 @@ fn record_of(schedule: ReminderSchedule) -> ScheduledRecord {
     payload_hash: schedule.payload_hash,
   }
 }
+
+#[cfg(target_os = "android")]
+async fn rearm_after_reboot(handle: &StoreHandle, user_id: &str, rearmed: &mut Signal<bool>) {
+  if *rearmed.peek() {
+    return;
+  }
+
+  rearmed.set(true);
+  handle.clear_reminder_schedules(user_id).await;
+}
+
+#[cfg(not(target_os = "android"))]
+async fn rearm_after_reboot(_handle: &StoreHandle, _user_id: &str, _rearmed: &mut Signal<bool>) {}
 
 async fn reconcile(handle: StoreHandle, user_id: String, desired: Vec<ScheduledReminder>) {
   let current: Vec<ScheduledRecord> = handle.load_reminder_schedules(&user_id).await.into_iter().map(record_of).collect();
@@ -70,10 +93,18 @@ pub fn use_reminders(store: NotesStore) {
   let mut support = use_signal(SchedulerSupport::default);
   let mut generation = use_signal(|| 0u64);
   let mut pending = use_signal(Vec::<(Note, i64)>::new);
+  let mut rearmed = use_signal(|| false);
 
   use_hook(move || {
     spawn(async move {
-      support.set(scheduler::support().await);
+      let mut current = scheduler::support().await;
+
+      if requires_permission_prompt(current) && store.peek_reminders_enabled() {
+        scheduler::request_permission().await;
+        current = scheduler::support().await;
+      }
+
+      support.set(current);
     });
   });
 
@@ -116,10 +147,12 @@ pub fn use_reminders(store: NotesStore) {
         return;
       }
 
+      rearm_after_reboot(&handle, &user_id, &mut rearmed).await;
       reconcile(handle, user_id, desired).await;
     });
   });
 
+  let ticker_handle = handle.clone();
   use_hook(move || {
     spawn(async move {
       let mut delivered = HashSet::<(String, i64)>::new();
@@ -127,18 +160,28 @@ pub fn use_reminders(store: NotesStore) {
       loop {
         tokio::time::sleep(Duration::from_millis(TICK_MS)).await;
 
-        if support().background || !date_math::local_offset_ready() {
+        if !date_math::local_offset_ready() {
           continue;
         }
 
-        if !store.peek_reminders_enabled() || store.peek_user_id().is_empty() {
+        let user_id = store.peek_user_id();
+
+        if !store.peek_reminders_enabled() || user_id.is_empty() {
           continue;
         }
+
+        let scheduled: HashSet<String> = ticker_handle
+          .load_reminder_schedules(&user_id)
+          .await
+          .into_iter()
+          .map(|schedule| schedule.note_id)
+          .collect();
 
         let due = due_notes(&store.peek_notes(), now_ms(), date_math::local_offset_ms(), CATCH_UP_WINDOW_MS);
 
         let fresh: Vec<(Note, i64)> = due
           .into_iter()
+          .filter(|(note, _)| !scheduled.contains(&note.id))
           .filter(|(note, fire_at_local_ms)| delivered.insert((note.id.clone(), *fire_at_local_ms)))
           .collect();
 
