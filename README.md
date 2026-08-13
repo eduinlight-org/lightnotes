@@ -179,6 +179,73 @@ That runner is itself a Docker container, defined in `/opt/gh-runner-docker` on 
 
 Per-platform details — signing secrets, WebView2, the glibc floor — are in [`apps/desktop/README.md`](apps/desktop/README.md).
 
+## Observability
+
+The API exports traces, metrics, and logs over OTLP (HTTP/protobuf) to the homelab `grafana/otel-lgtm` stack, which fans them out to Tempo, Prometheus, and Loki. No other service is instrumented: the landing SSR binary has no server functions worth tracing, `web` is static nginx, and the desktop/mobile clients cannot reach a LAN-only ingest endpoint.
+
+**Export is off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set**, so `make api-dev` and CI behave exactly as before. To point a local API at the stack, use a distinct service name so dev traffic stays out of the production series:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=http://otlp.grafana.lan:4318 \
+OTEL_SERVICE_NAME=lightnotes-api-dev \
+OTEL_METRIC_EXPORT_INTERVAL=5000 \
+make api-dev
+```
+
+Grafana is at `http://grafana.lan`. Tempo indexes new spans with a lag of roughly ten seconds, so a search run immediately after a request will come back empty even when the export succeeded.
+
+What is emitted:
+
+| Signal | Detail |
+| --- | --- |
+| Traces | One server span per request, named `{method} {route}` per semconv. Incoming `traceparent` is honoured, so a caller's trace continues into the API. Unmatched routes report `http.route=unmatched` to bound Prometheus cardinality. Outbound Google token exchanges get a client span. |
+| Logs | The existing `tracing` events, bridged to OTLP. Records emitted inside a request carry `trace_id`/`span_id`, so Grafana links a Tempo span to its log lines. |
+| Metrics | `http.server.request.duration`, `http.server.active_requests`, `db.client.operation.duration` (via the MongoDB driver's command monitor), `lightnotes.sse.active_streams`, `lightnotes.changes.processed`, `lightnotes.auth.attempts`. |
+| Process | `process.cpu.utilization`, `process.memory.usage`, `process.memory.virtual`, `process.uptime`, sampled from the running process. |
+
+### Log levels
+
+`RUST_LOG` is the single control, and it applies to local logs and Loki alike — nothing is filtered out of the OTLP bridge except the exporter's own internals, which would otherwise feed back into themselves. The default is `info,tower_http=debug`, which gives one request line and one response line per request. Raise or lower it per component:
+
+```bash
+RUST_LOG=info                      # quietest useful setting: startup, warnings, errors
+RUST_LOG=info,tower_http=debug     # default: adds per-request lines
+RUST_LOG=debug,api=trace           # everything the API emits
+```
+
+Note that the app itself logs sparingly — a couple of INFO lines at startup and WARN on auth failures — so at `info` alone Loki will look almost empty even when export is working. That is the app being quiet, not the pipeline being broken; check Tempo or the metrics to confirm traffic is flowing.
+
+Prometheus renames metrics on ingest: dots become underscores and the unit is appended, so `process.cpu.utilization` is queried as `process_cpu_utilization_ratio` and `http.server.request.duration` as `http_server_request_duration_seconds`. Browse the real names in Grafana Explore rather than guessing.
+
+`/healthz` stays a bare liveness `200`. `/readyz` pings MongoDB and returns `503` when the database is unreachable.
+
+The API drains connections on SIGTERM and flushes buffered telemetry before exiting, so the last batch survives a pod rollout. This depends on the container running the binary as PID 1 — `deploy/api/Dockerfile` uses exec-form `CMD`, which does.
+
+### Production deployment
+
+The Kubernetes manifests live in the separate `eduinlight-org/lightnotes-cd` repo (`prod/kustomization.yaml`), which this repo only touches via `cd-bump.yml` image bumps. Add to the API Deployment's container `env:`:
+
+```yaml
+- name: OTEL_EXPORTER_OTLP_ENDPOINT
+  value: "http://otlp.grafana.lan:4318"
+- name: OTEL_EXPORTER_OTLP_PROTOCOL
+  value: "http/protobuf"
+- name: OTEL_SERVICE_NAME
+  value: "lightnotes-api"
+- name: HOSTNAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+```
+
+`HOSTNAME` becomes `service.instance.id`, which is how you tell replicas apart; without it each pod invents a random UUID that changes on restart. Do not also set `OTEL_RESOURCE_ATTRIBUTES=deployment.environment=...` — the API already derives the current `deployment.environment.name` attribute from `APP_ENV`, and the older `deployment.environment` key would land alongside it as a confusing duplicate.
+
+Also worth setting there: `terminationGracePeriodSeconds: 30` so the telemetry flush has room, and a `readinessProbe` on `/readyz`.
+
+The process metrics above cover the API process only — its own CPU and memory. **Host-level utilization for the Proxmox node and the LXCs is not covered by this repo** and needs an agent on each machine: `node_exporter` plus a scrape config, or a Grafana Alloy / OTel Collector agent shipping OTLP to the same `:4318` endpoint. `prometheus-pve-exporter` covers the Proxmox host's VM/LXC/storage view. Until one of those is deployed, host CPU/RAM panels in Grafana will stay empty.
+
+Two things to keep an eye on. Ingest has no TLS and no authentication — anything on the LAN can write to it, and nothing sensitive should be put in span or log attributes. And LXC 122 has a 40 GB rootfs with untuned retention, so watch disk as ingest ramps up.
+
 ## Styling
 
 Each platform app scans its own `src/` plus the shared `packages/app` and `packages/ui` sources for Tailwind classes — `dx serve`/`dx build` compile this automatically, no separate Node/npm step required.
