@@ -1,0 +1,156 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    name: Linux
+    runs-on: [self-hosted, homelab]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Stub dx-generated stylesheets
+        shell: bash
+        run: |
+          for app in desktop landing mobile web; do
+            mkdir -p "apps/$app/assets"
+            touch "apps/$app/assets/tailwind.css"
+          done
+
+      - name: Cache cargo registry and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: ci-linux
+
+      - name: Check
+        run: cargo check --locked
+
+      - name: Check web build
+        run: cargo check --locked --package app --target wasm32-unknown-unknown
+
+      - name: Test
+        run: cargo test --locked --package app --package store-sdk --package sync-dto --package ui
+
+  macos:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Stub dx-generated stylesheets
+        shell: bash
+        run: |
+          for app in desktop landing mobile web; do
+            mkdir -p "apps/$app/assets"
+            touch "apps/$app/assets/tailwind.css"
+          done
+
+      - name: Cache cargo registry and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: ci-macos
+
+      - name: Check
+        run: cargo check --locked
+
+      - name: Test
+        run: cargo test --locked --package app --package store-sdk --package sync-dto --package ui
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install NASM
+        uses: ilammy/setup-nasm@v1
+
+      - name: Stub dx-generated stylesheets
+        shell: bash
+        run: |
+          for app in desktop landing mobile web; do
+            mkdir -p "apps/$app/assets"
+            touch "apps/$app/assets/tailwind.css"
+          done
+
+      - name: Cache cargo registry and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: ci-windows
+
+      - name: Check
+        run: cargo check --locked
+
+      - name: Test
+        run: cargo test --locked --package app --package store-sdk --package sync-dto --package ui
+
+  mobile:
+    name: Mobile
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, aarch64-apple-ios
+
+      - name: Stub dx-generated stylesheets
+        shell: bash
+        run: |
+          for app in desktop landing mobile web; do
+            mkdir -p "apps/$app/assets"
+            touch "apps/$app/assets/tailwind.css"
+          done
+
+      - name: Cache cargo registry and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: ci-mobile
+
+      - name: Check iOS
+        run: cargo check --locked --package app --target aarch64-apple-ios
+
+      - name: Check Android
+        env:
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_LATEST_HOME }}
+        run: |
+          BIN="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/darwin-x86_64/bin"
+          export PATH="$BIN:$PATH"
+          export CC_aarch64_linux_android="$BIN/aarch64-linux-android26-clang"
+          export AR_aarch64_linux_android="$BIN/llvm-ar"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$BIN/aarch64-linux-android26-clang"
+          cargo check --locked --package app --target aarch64-linux-android
