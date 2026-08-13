@@ -2,6 +2,7 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::Html;
 use axum::Json;
+use opentelemetry::KeyValue;
 use serde::Deserialize;
 use sync_dto::{
   AuthConfigResponse, AuthSessionResponse, AuthTokensDto, CurrentUserResponse, GoogleSignInRequest, NativeAuthPollRequest,
@@ -42,6 +43,13 @@ fn to_tokens_dto(session: &IssuedSession) -> AuthTokensDto {
   }
 }
 
+fn record_auth(state: &AppState, method: &'static str, outcome: &'static str) {
+  state
+    .metrics
+    .auth_attempts
+    .add(1, &[KeyValue::new("auth.method", method), KeyValue::new("outcome", outcome)]);
+}
+
 fn status_for(error: &AuthError) -> StatusCode {
   match error {
     AuthError::Backend(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -73,8 +81,11 @@ pub async fn google_sign_in(
     .await
     .map_err(|err| {
       tracing::warn!("google sign in failed: {err}");
+      record_auth(&state, "google", "failure");
       status_for(&err)
     })?;
+
+  record_auth(&state, "google", "success");
 
   let tokens = to_tokens_dto(&session);
 
@@ -96,8 +107,11 @@ pub async fn refresh(State(state): State<AppState>, Json(request): Json<RefreshR
     .await
     .map_err(|err| {
       tracing::warn!("session refresh failed: {err}");
+      record_auth(&state, "refresh", "failure");
       status_for(&err)
     })?;
+
+  record_auth(&state, "refresh", "success");
 
   Ok(Json(RefreshResponse {
     tokens: to_tokens_dto(&session),
@@ -116,8 +130,11 @@ pub async fn logout(State(state): State<AppState>, Json(request): Json<SignOutRe
     .await
     .map_err(|err| {
       tracing::warn!("sign out failed: {err}");
+      record_auth(&state, "logout", "failure");
       status_for(&err)
     })?;
+
+  record_auth(&state, "logout", "success");
 
   Ok(StatusCode::NO_CONTENT)
 }
@@ -125,8 +142,11 @@ pub async fn logout(State(state): State<AppState>, Json(request): Json<SignOutRe
 pub async fn native_start(State(state): State<AppState>) -> Result<Json<NativeAuthStartResponse>, StatusCode> {
   let started = state.native_auth_handler.start(now_ms()).await.map_err(|err| {
     tracing::warn!("native auth start failed: {err}");
+    record_auth(&state, "native_start", "failure");
     status_for(&err)
   })?;
+
+  record_auth(&state, "native_start", "success");
 
   Ok(Json(NativeAuthStartResponse {
     ticket: started.ticket,
@@ -152,13 +172,18 @@ fn callback_page(message: &str) -> Html<String> {
 
 pub async fn native_callback(State(state): State<AppState>, Query(params): Query<NativeCallbackParams>) -> Html<String> {
   if params.code.is_empty() || params.state.is_empty() {
+    record_auth(&state, "native_callback", "cancelled");
     return callback_page("Sign-in was cancelled. You can close this window.");
   }
 
   match state.native_auth_handler.complete(&params.code, &params.state, now_ms()).await {
-    Ok(()) => callback_page("Signed in. You can close this window and return to LightNotes."),
+    Ok(()) => {
+      record_auth(&state, "native_callback", "success");
+      callback_page("Signed in. You can close this window and return to LightNotes.")
+    }
     Err(err) => {
       tracing::warn!("native auth callback failed: {err}");
+      record_auth(&state, "native_callback", "failure");
       callback_page("Sign-in failed. You can close this window and try again.")
     }
   }
@@ -170,23 +195,30 @@ pub async fn native_poll(
 ) -> Result<(StatusCode, Json<Option<AuthSessionResponse>>), StatusCode> {
   let outcome = state.native_auth_handler.poll(&request.ticket).await.map_err(|err| {
     tracing::warn!("native auth poll failed: {err}");
+    record_auth(&state, "native_poll", "failure");
     status_for(&err)
   })?;
 
   match outcome {
     PollOutcome::Pending => Ok((StatusCode::ACCEPTED, Json(None))),
-    PollOutcome::Failed => Err(StatusCode::UNAUTHORIZED),
-    PollOutcome::Complete(session) => Ok((
-      StatusCode::OK,
-      Json(Some(AuthSessionResponse {
-        user: to_user_dto(session.user),
-        tokens: AuthTokensDto {
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
-          expires_in_secs: session.expires_in_secs,
-        },
-      })),
-    )),
+    PollOutcome::Failed => {
+      record_auth(&state, "native_poll", "failure");
+      Err(StatusCode::UNAUTHORIZED)
+    }
+    PollOutcome::Complete(session) => {
+      record_auth(&state, "native_poll", "success");
+      Ok((
+        StatusCode::OK,
+        Json(Some(AuthSessionResponse {
+          user: to_user_dto(session.user),
+          tokens: AuthTokensDto {
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            expires_in_secs: session.expires_in_secs,
+          },
+        })),
+      ))
+    }
   }
 }
 

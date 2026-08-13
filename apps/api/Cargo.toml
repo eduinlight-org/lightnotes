@@ -22,6 +22,13 @@ async-trait = "0.1.91"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
 tracing-appender = "0.2.3"
+tracing-opentelemetry = "0.33.0"
+opentelemetry = "0.32.0"
+opentelemetry_sdk = "0.32.1"
+opentelemetry-otlp = { version = "0.32.0", default-features = false, features = ["http-proto","reqwest-blocking-client","trace","metrics","logs","internal-logs"] }
+opentelemetry-appender-tracing = "0.32.0"
+opentelemetry-semantic-conventions = { version = "0.32.1", features = ["semconv_experimental"] }
+opentelemetry-http = "0.32.0"
 serde_json = "1.0.151"
 futures-util = "0.3.33"
 tokio-stream = { version = "0.1.19", features = ["sync"] }
@@ -31,3 +38,6 @@ sha2 = "0.11.0"
 rand = "0.10.2"
 base64 = "0.23.0"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+[target.'cfg(unix)'.dependencies]
+sysinfo = { version = "0.39.6", default-features = false, features = ["system"] }

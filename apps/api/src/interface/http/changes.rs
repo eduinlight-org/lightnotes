@@ -1,4 +1,5 @@
 use std::convert::Infallible;
+use std::sync::Arc;
 use std::time::Duration;
 
 use axum::extract::{Query, State};
@@ -6,6 +7,7 @@ use axum::http::StatusCode;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
 use futures_util::{Stream, StreamExt};
+use opentelemetry::KeyValue;
 use serde::Deserialize;
 use sync_dto::{AcceptedChange, PullChangesResponse, PushChangesRequest, PushChangesResponse, QueuedChange, RejectedChange, ServerChange};
 
@@ -14,9 +16,27 @@ use crate::application::queries::pull_changes::PullChangesQuery;
 use crate::application::queries::stream_changes::{StreamChangesQuery, StreamItem};
 use crate::domain::change::Change;
 use crate::domain::ports::StoredChange;
+use crate::infrastructure::telemetry::AppMetrics;
 
 use super::auth_user::AuthUser;
 use super::state::AppState;
+
+struct StreamGauge {
+  metrics: Arc<AppMetrics>,
+}
+
+impl StreamGauge {
+  fn open(metrics: Arc<AppMetrics>) -> Self {
+    metrics.sse_active_streams.add(1, &[]);
+    Self { metrics }
+  }
+}
+
+impl Drop for StreamGauge {
+  fn drop(&mut self) {
+    self.metrics.sse_active_streams.add(-1, &[]);
+  }
+}
 
 fn now_ms() -> i64 {
   std::time::SystemTime::now()
@@ -45,6 +65,11 @@ pub async fn push(State(state): State<AppState>, user: AuthUser, Json(request): 
     .map(|queued| to_domain_change(&user.user_id, queued))
     .collect();
   let outcome = state.push_handler.handle(PushChangesCommand { changes }, now_ms()).await;
+
+  let accepted = outcome.accepted.len() as u64;
+  let rejected = outcome.rejected.len() as u64;
+  state.metrics.changes_processed.add(accepted, &[KeyValue::new("outcome", "accepted")]);
+  state.metrics.changes_processed.add(rejected, &[KeyValue::new("outcome", "rejected")]);
 
   Json(PushChangesResponse {
     accepted: outcome
@@ -119,7 +144,11 @@ pub async fn stream(
       StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-  let event_stream = items.map(|item| {
+  let gauge = StreamGauge::open(state.metrics.clone());
+
+  let event_stream = items.map(move |item| {
+    let _open = &gauge;
+
     Ok(match item {
       StreamItem::Change(stored) => {
         let server_change = to_server_change(*stored);

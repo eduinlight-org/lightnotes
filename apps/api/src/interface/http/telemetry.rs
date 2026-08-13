@@ -1,0 +1,98 @@
+use std::sync::Arc;
+use std::time::Instant;
+
+use axum::extract::{MatchedPath, Request, State};
+use axum::middleware::Next;
+use axum::response::Response;
+use opentelemetry::global;
+use opentelemetry::KeyValue;
+use opentelemetry_http::HeaderExtractor;
+use opentelemetry_semantic_conventions::attribute::{
+  HTTP_REQUEST_METHOD, HTTP_RESPONSE_STATUS_CODE, HTTP_ROUTE,
+};
+use tracing::Span;
+use tracing_opentelemetry::OpenTelemetrySpanExt;
+
+use crate::infrastructure::telemetry::AppMetrics;
+
+const UNMATCHED_ROUTE: &str = "unmatched";
+
+fn matched_route<B>(request: &axum::http::Request<B>) -> String {
+  request
+    .extensions()
+    .get::<MatchedPath>()
+    .map(|path| path.as_str().to_string())
+    .unwrap_or_else(|| UNMATCHED_ROUTE.to_string())
+}
+
+pub fn make_span<B>(request: &axum::http::Request<B>) -> Span {
+  let method = request.method().as_str();
+  let route = matched_route(request);
+
+  let span = tracing::info_span!(
+    "http_request",
+    otel.name = format!("{method} {route}"),
+    otel.kind = "server",
+    "http.request.method" = method,
+    "http.route" = route,
+    "url.path" = request.uri().path(),
+    "http.response.status_code" = tracing::field::Empty,
+  );
+
+  let parent = global::get_text_map_propagator(|propagator| {
+    propagator.extract(&HeaderExtractor(request.headers()))
+  });
+  let _ = span.set_parent(parent);
+
+  span
+}
+
+struct InFlightGuard {
+  metrics: Arc<AppMetrics>,
+  attributes: [KeyValue; 1],
+}
+
+impl InFlightGuard {
+  fn enter(metrics: Arc<AppMetrics>, method: String) -> Self {
+    let attributes = [KeyValue::new(HTTP_REQUEST_METHOD, method)];
+    metrics.http_active_requests.add(1, &attributes);
+    Self { metrics, attributes }
+  }
+}
+
+impl Drop for InFlightGuard {
+  fn drop(&mut self) {
+    self.metrics.http_active_requests.add(-1, &self.attributes);
+  }
+}
+
+pub async fn record_metrics(
+  State(metrics): State<Arc<AppMetrics>>,
+  request: Request,
+  next: Next,
+) -> Response {
+  let method = request.method().as_str().to_string();
+  let route = matched_route(&request);
+
+  let in_flight = InFlightGuard::enter(metrics.clone(), method.clone());
+
+  let started = Instant::now();
+  let response = next.run(request).await;
+  let elapsed = started.elapsed().as_secs_f64();
+
+  drop(in_flight);
+
+  let status = response.status().as_u16();
+  Span::current().record("http.response.status_code", status);
+
+  metrics.http_request_duration.record(
+    elapsed,
+    &[
+      KeyValue::new(HTTP_REQUEST_METHOD, method),
+      KeyValue::new(HTTP_ROUTE, route),
+      KeyValue::new(HTTP_RESPONSE_STATUS_CODE, i64::from(status)),
+    ],
+  );
+
+  response
+}
