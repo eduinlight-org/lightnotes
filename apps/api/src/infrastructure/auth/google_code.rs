@@ -56,6 +56,17 @@ impl GoogleCodeExchanger for GoogleCodeClient {
     )
   }
 
+  #[tracing::instrument(
+    name = "google.token.exchange",
+    skip_all,
+    fields(
+      otel.kind = "client",
+      server.address = "oauth2.googleapis.com",
+      http.request.method = "POST",
+      url.full = TOKEN_ENDPOINT,
+      http.response.status_code = tracing::field::Empty,
+    )
+  )]
   async fn exchange_code(&self, code: &str, pkce_verifier: &str) -> Result<String, AuthError> {
     let params = [
       ("code", code),
@@ -73,6 +84,8 @@ impl GoogleCodeExchanger for GoogleCodeClient {
       .send()
       .await
       .map_err(|err| AuthError::Backend(err.to_string()))?;
+
+    tracing::Span::current().record("http.response.status_code", response.status().as_u16());
 
     let payload = response
       .json::<TokenResponse>()
