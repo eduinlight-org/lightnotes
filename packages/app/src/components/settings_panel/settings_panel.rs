@@ -225,7 +225,9 @@ pub fn SettingsPanel() -> Element {
                   Notebook { size: "20px", stroke: "var(--accent)" }
                   div { class: "flex-1",
                       div { class: "text-sm font-medium text-[var(--secondary-color)]", {t!("app-name")} }
-                      div { class: "text-xs text-[var(--secondary-color-5)]", {t!("settings-version")} }
+                      div { class: "text-xs text-[var(--secondary-color-5)]",
+                          {t!("settings-version", version: env!("CARGO_PKG_VERSION"))}
+                      }
                   }
               }
           }

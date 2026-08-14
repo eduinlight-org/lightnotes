@@ -130,7 +130,7 @@ dependencies = [
 
 [[package]]
 name = "app"
-version = "0.1.0"
+version = "0.4.0"
 dependencies = [
  "api-sdk",
  "block2",
@@ -1590,7 +1590,7 @@ dependencies = [
 
 [[package]]
 name = "desktop"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "app",
  "dioxus",
@@ -4408,7 +4408,7 @@ dependencies = [
 
 [[package]]
 name = "light-notes-mobile"
-version = "0.1.0"
+version = "0.4.0"
 dependencies = [
  "app",
  "dioxus",
@@ -8733,7 +8733,7 @@ dependencies = [
 
 [[package]]
 name = "web"
-version = "0.1.0"
+version = "0.4.0"
 dependencies = [
  "app",
  "dioxus",

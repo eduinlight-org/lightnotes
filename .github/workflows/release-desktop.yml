@@ -43,18 +43,18 @@ jobs:
             fi
 
             CARGO_VERSION="$(awk '
-              /^\[package\]/ { in_pkg = 1; next }
-              /^\[/          { in_pkg = 0 }
+              /^\[workspace\.package\]/ { in_pkg = 1; next }
+              /^\[/                     { in_pkg = 0 }
               in_pkg && /^version[[:space:]]*=/ {
                 gsub(/[",]/, "")
                 sub(/^version[[:space:]]*=[[:space:]]*/, "")
                 print
                 exit
               }
-            ' apps/desktop/Cargo.toml)"
+            ' Cargo.toml)"
 
             if [ "$VERSION" != "$CARGO_VERSION" ]; then
-              echo "::error::tag says ${VERSION} but apps/desktop/Cargo.toml says ${CARGO_VERSION}."
+              echo "::error::tag says ${VERSION} but [workspace.package] in Cargo.toml says ${CARGO_VERSION}."
               echo "::error::The bundlers stamp the Cargo version into the artifacts, so these must agree."
               exit 1
             fi

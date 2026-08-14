@@ -265,7 +265,7 @@ auth-sync-requires-sign-in = Sync is paused until you sign in.
 auth-login-subtitle = Sign in with Google to reach your notes on every device.
 
 settings-about = About
-settings-version = Version 0.1.0 · local-first · multi-platform
+settings-version = Version { $version } · local-first · multi-platform
 
 language-en = English
 language-es = Español
