@@ -48,6 +48,11 @@ pub trait ChangeRepository: Send + Sync {
   async fn list_since(&self, user_id: &str, since: i64) -> Result<Vec<StoredChange>, RepositoryError>;
 }
 
+#[async_trait]
+pub trait HealthProbe: Send + Sync {
+  async fn ping(&self) -> Result<(), RepositoryError>;
+}
+
 pub trait ChangeNotifier: Send + Sync {
   fn notify(&self, change: StoredChange);
   fn subscribe(&self, user_id: &str) -> Pin<Box<dyn Stream<Item = StoredChange> + Send>>;

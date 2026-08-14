@@ -10,6 +10,8 @@ pub struct Config {
   pub jwt_secret: String,
   pub access_token_ttl_secs: i64,
   pub refresh_token_ttl_secs: i64,
+  pub otlp_endpoint: Option<String>,
+  pub service_name: String,
 }
 
 impl Config {
@@ -57,6 +59,13 @@ impl Config {
       .and_then(|value| value.parse().ok())
       .unwrap_or(2_592_000);
 
+    let otlp_endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+      .ok()
+      .map(|value| value.trim().to_string())
+      .filter(|value| !value.is_empty());
+
+    let service_name = std::env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "lightnotes-api".to_string());
+
     Self {
       api_port,
       mongodb_uri,
@@ -67,6 +76,8 @@ impl Config {
       jwt_secret,
       access_token_ttl_secs,
       refresh_token_ttl_secs,
+      otlp_endpoint,
+      service_name,
     }
   }
 

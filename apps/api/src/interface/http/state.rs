@@ -8,7 +8,8 @@ use crate::application::commands::sign_out::SignOutHandler;
 use crate::application::queries::current_user::CurrentUserHandler;
 use crate::application::queries::pull_changes::PullChangesHandler;
 use crate::application::queries::stream_changes::StreamChangesHandler;
-use crate::domain::ports::TokenIssuer;
+use crate::domain::ports::{HealthProbe, TokenIssuer};
+use crate::infrastructure::telemetry::AppMetrics;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -22,4 +23,6 @@ pub struct AppState {
   pub current_user_handler: Arc<CurrentUserHandler>,
   pub token_issuer: Arc<dyn TokenIssuer>,
   pub google_client_id: String,
+  pub health_probe: Arc<dyn HealthProbe>,
+  pub metrics: Arc<AppMetrics>,
 }
