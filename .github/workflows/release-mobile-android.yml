@@ -1,0 +1,126 @@
+name: Release mobile (Android)
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version stamped into the artifact names, without the leading v"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version stamped into the artifact names, without the leading v"
+        required: false
+        type: string
+        default: "dev"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-mobile-android-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DIOXUS_CLI_VERSION: "0.7.9"
+  API_BASE_URL: https://api-lightnotes.eduindev.com
+  ANDROID_NDK_VERSION: "27.2.12479018"
+  ANDROID_PLATFORM_VERSION: "34"
+  ANDROID_BUILD_TOOLS_VERSION: "34.0.0"
+  ANDROID_CMDLINE_TOOLS_BUILD: "13114758"
+
+jobs:
+  bundle:
+    runs-on: [self-hosted, homelab]
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: arm64
+            target: aarch64-linux-android
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install the Android SDK and NDK
+        run: |
+          set -euo pipefail
+
+          SDK="$HOME/android-sdk"
+          SDKMANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
+
+          if [ ! -x "$SDKMANAGER" ]; then
+            echo "installing command line tools ${ANDROID_CMDLINE_TOOLS_BUILD} into $SDK"
+            rm -rf "$SDK/cmdline-tools" "$RUNNER_TEMP/cmdline-tools"
+            mkdir -p "$SDK/cmdline-tools"
+            curl -fsSL -o "$RUNNER_TEMP/cmdline-tools.zip" \
+              "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_CMDLINE_TOOLS_BUILD}_latest.zip"
+            unzip -q "$RUNNER_TEMP/cmdline-tools.zip" -d "$RUNNER_TEMP"
+            mv "$RUNNER_TEMP/cmdline-tools" "$SDK/cmdline-tools/latest"
+            rm -f "$RUNNER_TEMP/cmdline-tools.zip"
+          fi
+
+          ( set +o pipefail; yes | "$SDKMANAGER" --sdk_root="$SDK" --licenses > /dev/null )
+          "$SDKMANAGER" --sdk_root="$SDK" \
+            "platform-tools" \
+            "platforms;android-${ANDROID_PLATFORM_VERSION}" \
+            "build-tools;${ANDROID_BUILD_TOOLS_VERSION}" \
+            "ndk;${ANDROID_NDK_VERSION}"
+
+          NDK="$SDK/ndk/$ANDROID_NDK_VERSION"
+          if [ ! -d "$NDK" ]; then
+            echo "::error::no NDK at $NDK"
+            ls -la "$SDK/ndk" || true
+            exit 1
+          fi
+
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$NDK" >> "$GITHUB_ENV"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: mobile-android-${{ matrix.target }}
+
+      - name: Cache dioxus-cli
+        id: cache-dx
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/dx
+          key: dioxus-cli-linux-${{ env.DIOXUS_CLI_VERSION }}
+
+      - name: Install dioxus-cli
+        if: steps.cache-dx.outputs.cache-hit != 'true'
+        run: cargo install dioxus-cli --version ${{ env.DIOXUS_CLI_VERSION }} --locked
+
+      - name: Bundle
+        env:
+          VERSION: ${{ inputs.version || 'dev' }}
+          ARCH: ${{ matrix.arch }}
+          OUT_DIR: ${{ github.workspace }}/dist/android
+        run: ./scripts/android-bundle.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-android-${{ matrix.arch }}
+          path: |
+            dist/android/*.apk
+            dist/android/*.aab
+          if-no-files-found: error
+          retention-days: 7
