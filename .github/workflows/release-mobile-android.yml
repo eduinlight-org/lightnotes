@@ -112,6 +112,7 @@ jobs:
         env:
           VERSION: ${{ inputs.version || 'dev' }}
           ARCH: ${{ matrix.arch }}
+          TARGET: ${{ matrix.target }}
           OUT_DIR: ${{ github.workspace }}/dist/android
         run: ./scripts/android-bundle.sh
 
