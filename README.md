@@ -134,26 +134,26 @@ The web, desktop, and mobile apps work fully offline without the API running —
 | Notes app — iOS | `make app-ios-build` |
 | Backend API | `make api-build` |
 
-### Releasing the desktop apps
+### Releasing the apps
 
-Desktop releases are cut by pushing a tag. One tag produces **one** GitHub Release carrying the artifacts for every platform — there are no platform-only releases.
+Releases are cut by pushing a tag. One tag produces **one** GitHub Release carrying the artifacts for every platform — there are no platform-only releases.
 
 ```bash
-# 1. bump the version in apps/desktop/Cargo.toml, commit, merge to main
+# 1. bump [workspace.package] version in the root Cargo.toml, commit, merge to main
 # 2. tag it
 git tag v1.2.3
 git push origin v1.2.3
 ```
 
-That triggers `.github/workflows/release-desktop.yml`, which:
+That triggers `.github/workflows/release-apps.yml`, which:
 
-1. resolves the version from the tag and **fails if it disagrees with `apps/desktop/Cargo.toml`**,
-2. fans out to the macOS, Windows and Linux workflows in parallel,
+1. resolves the version from the tag and **fails if it disagrees with `[workspace.package]` in the root `Cargo.toml`**,
+2. fans out to the macOS, Windows, Linux and Android workflows in parallel,
 3. collects every artifact, writes `SHA256SUMS`, and publishes a single **draft** release with notes generated from the commits since the previous release.
 
-The release job declares `needs: [macos, windows, linux]`, so **if any platform fails, nothing is published** — a half-built release can never reach users. The release is created as a draft: review the artifacts, then hit Publish. Tags with a prerelease suffix (`v1.2.3-rc.1`, `v1.2.3-beta.2`) are additionally marked as prereleases.
+The release job declares `needs: [macos, windows, linux, android]`, so **if any platform fails, nothing is published** — a half-built release can never reach users. The release is created as a draft: review the artifacts, then hit Publish. Tags with a prerelease suffix (`v1.2.3-rc.1`, `v1.2.3-beta.2`) are additionally marked as prereleases.
 
-The tag is the source of truth for the artifact filenames, but the *bundlers* stamp the version from `apps/desktop/Cargo.toml` into the binaries themselves — a `.dmg` named `1.2.3` whose `Info.plist` says `0.1.0` would be worse than a failed build, which is why the mismatch is a hard error rather than a warning.
+The tag is the source of truth for the artifact filenames, but the *bundlers* stamp the workspace version into the binaries themselves — a `.dmg` named `1.2.3` whose `Info.plist` says `0.1.0` would be worse than a failed build, which is why the mismatch is a hard error rather than a warning.
 
 Expected release contents:
 
@@ -165,17 +165,25 @@ LightNotes-1.2.3-windows-x86_64-setup.exe
 LightNotes-1.2.3-linux-x86_64.AppImage
 LightNotes-1.2.3-linux-x86_64.deb
 LightNotes-1.2.3-linux-x86_64.rpm
+LightNotes-1.2.3-android-arm64.apk
+LightNotes-1.2.3-android-arm64.aab
 SHA256SUMS
 ```
 
-Running the workflow via **workflow_dispatch** is a dry run: it builds all three platforms and uploads the artifacts to the run, but publishes no release. Use it to check a platform after changing its workflow.
+Two caveats on the Android artifacts, both deliberate:
 
-The `version`, `linux` and `release` jobs all run on the `[self-hosted, homelab]` runner. macOS and Windows use GitHub-hosted runners, since the self-hosted one is Linux X64.
+- Neither is release-signed. `scripts/android-bundle.sh` only runs `assembleRelease` when `apps/mobile/Dioxus.toml` carries a `[bundle.android]` signing block, and it does not yet — there is no upload keystore. The APK is **debug-signed** (`CN=Android Debug`): it installs and runs fine, but it cannot be upgraded in place once a real key is introduced. The `.aab` is **unsigned**, so it is a build artifact rather than something Play will accept as-is. Adding the signing block plus the keystore secrets flips the script over with no further edits.
+- Both are **arm64 only** (`lib/arm64-v8a` and nothing else). `dx` builds the single default Android target, so an x86_64 emulator will not run the APK.
+
+Running the workflow via **workflow_dispatch** is a dry run: it builds every platform and uploads the artifacts to the run, but publishes no release. Use it to check a platform after changing its workflow.
+
+The `version`, `linux`, `android` and `release` jobs all run on the `[self-hosted, homelab]` runner. macOS and Windows use GitHub-hosted runners, since the self-hosted one is Linux X64.
 
 That runner is itself a Docker container, defined in `/opt/gh-runner-docker` on the runner host and built from `ubuntu:22.04` with the WebKitGTK build dependencies baked in. Two consequences worth knowing:
 
 - The **glibc floor is pinned by the runner image**, not by a `container:` block in a workflow. The host is Debian 12 (glibc 2.36); the runner image is Ubuntu 22.04 (glibc 2.35), which is what we actually ship against.
 - Every job runs as the same unprivileged user inside that container. An earlier arrangement — a `container:` block on a host-installed runner — left `root`-owned files in the shared workspace that later host-level jobs could not clean, failing `actions/checkout` with `EACCES`. Running the runner itself in the container removes that class of problem rather than working around it.
+- The image carries no JDK and no Android SDK, so the Android job installs both itself. It pins `ANDROID_SDK_ROOT` to `$HOME/android-sdk`, which is inside the `runner-home` Docker volume, so the multi-gigabyte NDK download survives a container rebuild and only happens once.
 
 Per-platform details — signing secrets, WebView2, the glibc floor — are in [`apps/desktop/README.md`](apps/desktop/README.md).
 

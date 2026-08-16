@@ -143,6 +143,7 @@ mod tests {
     args.set("query", "notes");
     args.set("time", "just now");
     args.set("when", "3 Jan · 9:00 am");
+    args.set("version", env!("CARGO_PKG_VERSION"));
 
     for id in message_ids(source) {
       let message = bundle.get_message(&id).expect("message should exist");

@@ -26,6 +26,9 @@ default-members = [
     "apps/landing",
 ]
 
+[workspace.package]
+version = "0.5.0"
+
 [profile.dev.package."*"]
 debug = false
 
